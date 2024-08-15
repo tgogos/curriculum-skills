@@ -6,10 +6,11 @@ authors = ["Mary Fol <miafol123@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.12"
+python = ">=3.11,<3.12"
+spacy = "^3.4.0"
+pydantic = ">=1.8,<1.9" 
 ojd-daps-skills = "^1.0.2"
-spacy = ">=3.5.0,<3.6.0"
-pydantic = ">=1.10.0,<1.11.0"
+
 
 
 [build-system]
