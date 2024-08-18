@@ -6,12 +6,15 @@ authors = ["Mary Fol <miafol123@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.12"
-spacy = "^3.4.0"
-pydantic = ">=1.8,<1.9" 
-ojd-daps-skills = "^1.0.2"
+python = "^3.9"
+nltk = "^3.9"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.2"
 
 [build-system]
 requires = ["poetry-core"]
