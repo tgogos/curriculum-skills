@@ -1,5 +1,6 @@
 KALI LINUX
 
+Installation for 3.12 - 3.11 (Doesn't work with new update 1.0.2!)
 - Install pipx
 - (run installation commands)
 - Ensure spacy compatible with pydantic (spacy 3.4 + latest pydantic)
@@ -55,7 +56,8 @@ wn.synsets('dog')
 -- PYDANTIC AND SPACY COMPATIBILITY ERROR
 --> move to python 3.10 --> no issues!
 
-# LIBRARY DEPENDENCIES AND VERSIONS NEEDED TO RUN
+
+# LIBRARY DEPENDENCIES AND VERSIONS NEEDED TO RUN - Python 3.10
 ```
 * ojd_daps_skills==1.0.2
  - tqdm [required: ==4.64.0, installed: 4.66.5]
@@ -408,7 +410,3 @@ pytest==8.3.2
 ├── pluggy [required: >=1.5,<2, installed: 1.5.0]
 └── tomli [required: >=1, installed: 2.0.1]
 ```
-
---> go again back at ojd_daps_skills 1.0.1
-
-- 
