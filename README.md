@@ -52,4 +52,7 @@ nltk.data.path.append('/home/ren/nltk_data')
 from nltk.corpus import wordnet as wn
 wn.synsets('dog')
 
+-- PYDANTIC AND SPACY COMPATIBILITY ERROR
+--> go again back at ojd_daps_skills 1.0.1
+
 - 
