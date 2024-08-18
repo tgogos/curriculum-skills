@@ -53,6 +53,7 @@ from nltk.corpus import wordnet as wn
 wn.synsets('dog')
 
 -- PYDANTIC AND SPACY COMPATIBILITY ERROR
+--> move to python 3.10 --> no issues!
 --> go again back at ojd_daps_skills 1.0.1
 
 - 
