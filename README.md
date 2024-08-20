@@ -75,7 +75,7 @@ poetry run pytest tests/
 - NLTK's WordNet data might present issues when installed with `--user` in a virtual environment managed by Poetry. To resolve this, remove any existing NLTK data:
 
 ```bash
-rm -rf /home/ren/nltk_data
+rm -rf /home/mfol/nltk_data
 ```
 
 ### Step 5: Reinstall NLTK
@@ -96,8 +96,8 @@ wget https://raw.githubusercontent.com/nltk/nltk_data/gh-pages/packages/corpora/
 - Extract the WordNet data to your `nltk_data` directory:
 
 ```bash
-mkdir -p /home/ren/nltk_data/corpora
-unzip wordnet.zip -d /home/ren/nltk_data/corpora/
+mkdir -p /home/mfol/nltk_data/corpora
+unzip wordnet.zip -d /home/mfol/nltk_data/corpora/
 ```
 
 ### Step 7: Verify Installation
@@ -111,7 +111,7 @@ poetry run python
 
 ```python
 import nltk
-nltk.data.path.append('/home/ren/nltk_data')
+nltk.data.path.append('/home/mfol/nltk_data')
 from nltk.corpus import wordnet as wn
 wn.synsets('dog')
 ```
