@@ -1,63 +1,124 @@
-KALI LINUX
+# Crawler Setup on Kali Linux using `nesta ojd_daps_skills` Library ⭐
 
-Installation for 3.12 - 3.11 (Doesn't work with new update 1.0.2!)
-- Install pipx
-- (run installation commands)
-- Ensure spacy compatible with pydantic (spacy 3.4 + latest pydantic)
-- NLTK installation
-- Wordnet issue (install NLTK as --user but its impossible in virtualenv cause we are already in poetry)
-- rm -rf /home/ren/nltk_data
+> ⚠️ **Warning:**
+> 
+> This version (and the ojd_daps_skills==1.0.2) is incompatible with Python 3.11 and 3.12.
 
-2. Reinstall NLTK:
+### IMPORTANT Compatibility Note: Problems with PyDantic and SpaCy!
+- If you encounter compatibility errors, downgrade to Python 3.10, which has no issues. I discovered that after realizing the problem it has with ImpImporter!
 
-Sometimes, the issue could be with the installation of nltk. Reinstall it using Poetry:
+## What does it do?
+This script (for now) is designed to find and retrieve a PDF by link, extract text from the PDF, split the content by semesters and lessons and then identify relevant skills mentioned in each lesson in a university setting.
 
-bash
+### Functions
+> - extract_text_from_pdf(pdf_file_path: str) -> str : Extracts and returns the text from a given PDF file or from a UR
+> - split_by_semester(text: str) -> List[str]: Splits the text into semesters based on semester headings (example. 1st Semester") The function assumes that a "Course Outlines" (based on the provided pdf it was based on) exists and starts splitting after this section is found.
+> - split_by_lessons(semester_text: str) -> Dict[str, str] : Splits text into lessons (regex is still in development!)
+> - extract_skills_for_lessons(lessons: Dict[str, str], skills_extractor: ExtractSkills) -> Dict[str, List[Dict]]: Uses the ExtractSkills class to extract skills from the text of each lesson.
 
+## Installation Guide for Python 3.10 (Recommended for version 1.0.2)
+
+> ⚠️ **Warning:**
+> Ensure first that pipx and pip is installed!
+
+Begin with these commands:
+```
+pipx install poetry
+poetry shell
+poetry install
+pip install ojd-daps-skills
+python -m spacy download en_core_web_sm
+```
+Choose a folder to begin creating your Poetry project and run this command:
+```
+poetry init
+```
+It will guide you through the process of building your first project. 
+-- When the option to type in the Python version appears, type 3.10 !
+
+Continue with installing pytest:
+```
+pip install pytest
+```
+
+Put all your test_xxxx.py or xxxx_test.py files in the test folder inside your project
+
+Execute your tests by using this command:
+```
+poetry run pytest tests/
+```
+
+- Make sure it meets [these dependencies](#Library-Dependencies)!
+> ⚠️ **HINT:**
+> In case you are having issues with the library dependencies, install pipdeptree and check the dependencies.
+> Otherwise, by running pip check or poetry show <library-name>, see what problems are occuring.
+
+------------------------------
+
+# NOT RECOMMENDED!
+
+## Installation Guide for Python 3.12 - 3.11 (Note: Not compatible with version 1.0.2!)
+
+### Step 1: Install pipx
+- Begin by installing pipx to manage your Python packages.
+
+### Step 2: Install Required Packages
+- Run the necessary installation commands as per your environment setup.
+- Ensure compatibility between SpaCy and Pydantic by using SpaCy 3.4 with the latest Pydantic.
+
+### Step 3: Install NLTK
+- Install NLTK to handle natural language processing tasks.
+
+### Step 4: Resolve WordNet Issues
+- NLTK's WordNet data might present issues when installed with `--user` in a virtual environment managed by Poetry. To resolve this, remove any existing NLTK data:
+
+```bash
+rm -rf /home/ren/nltk_data
+```
+
+### Step 5: Reinstall NLTK
+- If you encounter issues, reinstall NLTK using Poetry:
+
+```bash
 poetry run pip uninstall nltk
 poetry run pip install nltk
+```
 
-3. Download WordNet Data Manually:
+### Step 6: Manually Download WordNet Data
+- Manually download and install the WordNet data to avoid dependency issues:
 
-Instead of relying on nltk.download, let's manually download the wordnet data:
-
-    Download the WordNet Corpus:
-
-    Download the WordNet data manually from the NLTK GitHub repository:
-
+```bash
 wget https://raw.githubusercontent.com/nltk/nltk_data/gh-pages/packages/corpora/wordnet.zip
+```
 
-Unzip the WordNet Corpus:
+- Extract the WordNet data to your `nltk_data` directory:
 
-Extract it to your nltk_data directory:
+```bash
+mkdir -p /home/ren/nltk_data/corpora
+unzip wordnet.zip -d /home/ren/nltk_data/corpora/
+```
 
-bash
+### Step 7: Verify Installation
+- Ensure everything is working by running the Python shell and testing WordNet:
 
-    mkdir -p /home/ren/nltk_data/corpora
-    unzip wordnet.zip -d /home/ren/nltk_data/corpora/
-
-4. Verify Installation:
-
-Now, try running the Python shell again and verify that the wordnet data can be loaded:
-
-bash
-
+```bash
 poetry run python
+```
 
-Then, in the Python shell:
+- In the Python shell:
 
-python
-
+```python
 import nltk
 nltk.data.path.append('/home/ren/nltk_data')
 from nltk.corpus import wordnet as wn
 wn.synsets('dog')
+```
+### After these steps, ensure to continue the installation like in the above Python 3.10 tutorial!
 
--- PYDANTIC AND SPACY COMPATIBILITY ERROR
---> move to python 3.10 --> no issues!
+-------------------------------------
 
-
-# LIBRARY DEPENDENCIES AND VERSIONS NEEDED TO RUN - Python 3.10
+# Library Dependencies 
+## for Python 3.10
 ```
 * ojd_daps_skills==1.0.2
  - tqdm [required: ==4.64.0, installed: 4.66.5]
