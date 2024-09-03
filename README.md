@@ -4,8 +4,8 @@
 > 
 > This version (and the ojd_daps_skills==1.0.2) is incompatible with Python 3.11 and 3.12.
 
-~~> ⚠️ This crawler version (0.1.0) is incomplete and will be improved in the way it handles regex!~~
-> Crawler v0.2.0 now handles regex correctly!
+~~⚠️ This crawler version (0.1.0) is incomplete and will be improved in the way it handles regex!~~
+> [LATEST]  ⚠️ Crawler v0.2.0 now handles regex correctly!
 
 ### IMPORTANT Compatibility Note: Problems with PyDantic and SpaCy!
 - If you encounter compatibility errors, downgrade to Python 3.10, which has no issues. I discovered that after realizing the problem it has with ImpImporter!
