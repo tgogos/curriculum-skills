@@ -51,7 +51,6 @@ def extract_text_after_marker(text: list, marker: str) -> str:
 
 def split_by_semester(text: str) -> list:
     print("Splitting text by semester")
-    # Adjust regex to capture semesters and their associated text
     semesters = re.split(r'(?i)(\b\d+\s*(?:st|nd|rd|th)?\s*Semester\b)', text)
     combined_semesters = [''.join(semesters[i:i+2]) for i in range(1, len(semesters), 2)]
     print(f"Found semesters: {len(combined_semesters)}")
@@ -70,7 +69,6 @@ def process_pages_by_lesson(pages: list) -> dict:
         if not lines or len(lines) < 2:
             continue
 
-        # The first line is expected to be the lesson name in uppercase
         lesson_name = lines[0].strip()
         if lesson_name.isupper():
             lesson_text = '\n'.join(lines[1:]).strip()
@@ -84,7 +82,6 @@ def main(url: str):
 
     pages = extract_text_from_pdf(pdf_file_path)
 
-    # Extracting text after the marker
     marker = 'Course Outlines'
     text_after_marker = extract_text_after_marker(pages, marker)
     
@@ -97,12 +94,10 @@ def main(url: str):
     all_data = {}
     for i, semester_text in enumerate(semesters, 1):
         print(f"Processing Semester {i}")
-        # Process text from each page in the semester
         lessons = process_pages_by_lesson([page for page in pages if page in semester_text])
         lesson_count = len(lessons)
         all_data[f'Semester {i} ({lesson_count} lessons)'] = lessons
 
-    # Ensure the first lesson is processed correctly
     if pages:
         first_page_text = pages[0]
         first_page_lines = first_page_text.split('\n')
