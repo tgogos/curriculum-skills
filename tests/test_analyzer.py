@@ -2,21 +2,27 @@ import pdfplumber
 import requests
 import re
 
-# Format functions -  Ignore
+# Format functions - Ignore
+
+def print_colored_text(text: str, color_code: str) -> None:
+    print(f"\033[{color_code}m{text}\033[0m")
 
 def print_horizontal_line(length: int) -> None:
     print('=' * length)
     
 def print_loading_line(length: int) -> None:
-    print('=' * length + '|] Loading...[|' + '=' * length)
-    
+    print_colored_text('=' * length + '|] Loading...[|' + '=' * length, 33)
     
 def print_horizontal_small_line(length: int) -> None:
     print('-' * length)
     
-def print_colored_text(text: str, color_code: str) -> None:
-    print(f"\033[{color_code}m{text}\033[0m")
-    
+
+# Helper functions
+def contains_greek_characters(text: str) -> bool:
+    return bool(re.search(r'[Α-ω]', text))
+
+def contains_no_lowercase_letters(text: str) -> bool:
+    return not any(char.islower() for char in text)
 
 # Main Functions
 
@@ -39,7 +45,7 @@ def extract_text_from_pdf(pdf_file_path: str) -> list:
     return page_texts
 
 def extract_text_after_marker(text: list, marker: str) -> str:
-    print(f" >>> Extracting text after marker: {marker}")
+    print_colored_text(f" >>> Extracting text after marker: {marker}", 34)
     full_text = '\n'.join(text)
     marker_index = full_text.lower().find(marker.lower())
     if marker_index == -1:
@@ -57,23 +63,30 @@ def split_by_semester(text: str) -> list:
     return combined_semesters
 
 def clean_lesson_name(name: str) -> str:
-    # Remove content in parentheses and trim the lesson name
     return re.sub(r'\s*\(.*?\)\s*', '', name).strip()
 
 def process_pages_by_lesson(pages: list) -> dict:
     print("Processing pages by lesson")
     lesson_dict = {}
-    
+    num_lines_to_check = 2  
+
     for page in pages:
         lines = page.split('\n')
-        if not lines or len(lines) < 2:
+        if not lines:
             continue
 
-        lesson_name = lines[0].strip()
-        if lesson_name.isupper():
-            lesson_text = '\n'.join(lines[1:]).strip()
-            lesson_dict[clean_lesson_name(lesson_name)] = lesson_text
-    
+        potential_lesson_name = ""
+        for i in range(min(num_lines_to_check, len(lines))):
+            line = lines[i].strip()
+            if line.isupper() or any(keyword in line.lower() for keyword in ["lesson", "course"]):
+                potential_lesson_name += line + " "
+
+        if potential_lesson_name:
+            lesson_name = clean_lesson_name(potential_lesson_name.strip())
+            if contains_no_lowercase_letters(lesson_name) and not contains_greek_characters(lesson_name):
+                lesson_text = '\n'.join(lines[num_lines_to_check:]).strip()
+                lesson_dict[lesson_name] = lesson_text
+
     return lesson_dict
 
 def main(url: str):
@@ -104,16 +117,19 @@ def main(url: str):
         if len(first_page_lines) > 1 and first_page_lines[0].isupper():
             lesson_name = clean_lesson_name(first_page_lines[0])
             lesson_text = '\n'.join(first_page_lines[1:]).strip()
-            if lesson_name not in all_data.get('Semester 1', {}):
-                all_data.setdefault('Semester 1', {})[lesson_name] = lesson_text
+            # Add to Semester 1 if it exists
+            if 'Semester 1' not in all_data:
+                all_data['Semester 1'] = {}
+            if lesson_name not in all_data['Semester 1']:
+                all_data['Semester 1'][lesson_name] = lesson_text
 
     for semester, lessons in all_data.items():
         print_horizontal_line(50)
         print_colored_text(f'{semester}:', 33)
-        # print(f'{semester}:')
         print_horizontal_small_line(50)
         for lesson, description in lessons.items():
             print(f'  {lesson}')
+            #print(f'    {description}')
 
 if __name__ == "__main__":
     pdf_url = "https://www.uom.gr/assets/site/public/nodes/4254/9477-Program_of_Studies_2020-2021.pdf"
