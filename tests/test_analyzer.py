@@ -15,7 +15,6 @@ def print_loading_line(length: int) -> None:
     
 def print_horizontal_small_line(length: int) -> None:
     print('-' * length)
-    
 
 # Helper functions
 def contains_greek_characters(text: str) -> bool:
@@ -65,6 +64,27 @@ def split_by_semester(text: str) -> list:
 def clean_lesson_name(name: str) -> str:
     return re.sub(r'\s*\(.*?\)\s*', '', name).strip()
 
+def extract_description(text: str) -> str:
+    start_marker = 'General competences'
+    end_marker = 'Assessment'
+    
+    start_index = text.find(start_marker)
+    if start_index == -1:
+        return ""
+
+    end_index = text.find(end_marker, start_index)
+    if end_index == -1:
+        end_index = len(text)
+
+    description = text[start_index + len(start_marker):end_index].strip()
+    description = description.replace('Course content', '').strip()
+
+    if not description:
+        return "This lesson has no data!"
+    
+    return description
+
+
 def process_pages_by_lesson(pages: list) -> dict:
     print("Processing pages by lesson")
     lesson_dict = {}
@@ -85,7 +105,9 @@ def process_pages_by_lesson(pages: list) -> dict:
             lesson_name = clean_lesson_name(potential_lesson_name.strip())
             if contains_no_lowercase_letters(lesson_name) and not contains_greek_characters(lesson_name):
                 lesson_text = '\n'.join(lines[num_lines_to_check:]).strip()
-                lesson_dict[lesson_name] = lesson_text
+                lesson_description = extract_description(lesson_text)
+                if lesson_description:
+                    lesson_dict[lesson_name] = lesson_description
 
     return lesson_dict
 
@@ -117,11 +139,11 @@ def main(url: str):
         if len(first_page_lines) > 1 and first_page_lines[0].isupper():
             lesson_name = clean_lesson_name(first_page_lines[0])
             lesson_text = '\n'.join(first_page_lines[1:]).strip()
-            # Add to Semester 1 if it exists
+            lesson_description = extract_description(lesson_text)
             if 'Semester 1' not in all_data:
                 all_data['Semester 1'] = {}
             if lesson_name not in all_data['Semester 1']:
-                all_data['Semester 1'][lesson_name] = lesson_text
+                all_data['Semester 1'][lesson_name] = lesson_description
 
     for semester, lessons in all_data.items():
         print_horizontal_line(50)
@@ -129,7 +151,12 @@ def main(url: str):
         print_horizontal_small_line(50)
         for lesson, description in lessons.items():
             print(f'  {lesson}')
-            #print(f'    {description}')
+            print_horizontal_small_line(25)
+            if description == "This lesson has no data!":
+                print_colored_text(f'    {description}', "31")
+            else:
+                print_colored_text(f'    {description}', "32")
+            print_horizontal_small_line(25)
 
 if __name__ == "__main__":
     pdf_url = "https://www.uom.gr/assets/site/public/nodes/4254/9477-Program_of_Studies_2020-2021.pdf"
