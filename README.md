@@ -5,7 +5,15 @@
 > This version (and the ojd_daps_skills==1.0.2) is incompatible with Python 3.11 and 3.12.
 
 ~~This crawler version (0.1.0) is incomplete and will be improved in the way it handles regex!~~
-> [LATEST]  ⚠️ Crawler v0.2.0 now handles regex correctly!
+> ⚠️ Crawler v0.2.0 now handles regex correctly!
+> [LATEST] Crawler v0.3.0 now shows descriptions for each lesson
+
+## Running the crawler:
+```
+python test_analyzer.py
+```
+This method should be used mainly for finding if the crawler splits the information correctly!
+Any skill matching will be done by using ```poetry run pytest test_analyzer.py``` *(implemented in the next version)*
 
 ### IMPORTANT Compatibility Note: Problems with PyDantic and SpaCy!
 - If you encounter compatibility errors, downgrade to Python 3.10, which has no issues. I discovered that after realizing the problem it has with ImpImporter!
