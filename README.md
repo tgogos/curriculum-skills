@@ -1,5 +1,5 @@
 # SKILLCRAWL 
-### *Crawler written using the esco_skill_extractor (PetraSkill) library for identifying relevant skills in university lessons*
+### *Crawler written using the esco_skill_extractor (PetraSkill) library for identifying relevant skills in university lessons, printing URLs AND skill keywords*
 ## Running the crawler:
 ```
 python skillcrawl.py
@@ -13,6 +13,10 @@ Despite the existence of a menu, you can run the program directly from cmd, such
 python skillcrawl.py skills algorithms
 ```
 <img width="773" alt="image" src="https://github.com/user-attachments/assets/eaaf7994-837b-40cb-a691-c47cbe3ecbde" />
+
+Furthermore, it bypasses the need to only have URLs as a mean to access skills, as it can directly print them.
+
+<img width="562" alt="image" src="https://github.com/user-attachments/assets/7b6b3edd-85bc-4ee5-b780-62d7eaaab58c" />
 
 ------------------------------------------------------------------
 # OLD GUIDE - Old Documentation! See above for latest change ⚠️
