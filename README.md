@@ -1,20 +1,18 @@
-# SKILLCRAWL
+# SKILLCRAWL 
+### *Crawler written using the esco_skill_extractor (PetraSkill) library for identifying relevant skills in university lessons*
+## Running the crawler:
+```
+python skillcrawl.py
+```
+This brings you to the main menu, used as a guide to understand what this crawler can do!
 
+<img width="842" alt="image" src="https://github.com/user-attachments/assets/97377236-db57-4357-8060-87beb3201d2e" />
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+Despite the existence of a menu, you can run the program directly from cmd, such as:
+```
+python skillcrawl.py skills algorithms
+```
+<img width="773" alt="image" src="https://github.com/user-attachments/assets/eaaf7994-837b-40cb-a691-c47cbe3ecbde" />
 
 ------------------------------------------------------------------
 # OLD GUIDE - Old Documentation! See above for latest change ⚠️
