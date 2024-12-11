@@ -1,5 +1,8 @@
 # SKILLCRAWL 
-### *Crawler written using the esco_skill_extractor (PetraSkill) library for identifying relevant skills in university lessons, printing URLs AND skill keywords*
+### *Crawler written using the esco_skill_extractor (PetraSkill) library for identifying relevant skills in university lessons, printing URLs and skill keywords*
+
+### Not implemented: Compatibility with other syllabus outside EU.
+
 ## Running the crawler:
 ```
 python skillcrawl.py
