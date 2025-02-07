@@ -17,7 +17,7 @@ from database import write_to_database
 from pdf_utils import download_pdf, extract_text_from_pdf, extract_text_after_marker, process_pages_by_lesson, split_by_semester
 from output import print_yellow_line, print_horizontal_line, print_colored_text, print_horizontal_small_line, print_green_line
 from menu import display_menu, parse_args 
-from skills import get_skills_for_lesson, extract_and_get_title
+from skills import get_skills_for_lesson, extract_and_get_title, search_courses_by_skill
 
 CACHE_DIR = 'cache'
 CACHE_FILE = 'pdf_cache.json'
@@ -31,10 +31,10 @@ skill_extractor = SkillExtractor()
 
 
 
-def main(url: str, simplified: bool, skills: bool, show_descr: bool, skillname: bool, database: bool, lesson_name: str = None):
+def main(url: str, simplified: bool, skills: bool, show_descr: bool, skillname: bool, database: bool, skillsearch: bool, lesson_name: str = None):
     print_yellow_line(50)
     pdf_file_path = 'Program_of_Studies_2020-2021.pdf'
-    download_pdf(url, pdf_file_path)
+    pdf_file_path = download_pdf(url, pdf_file_path)
 
     pages = extract_text_from_pdf(pdf_file_path)
 
@@ -60,14 +60,15 @@ def main(url: str, simplified: bool, skills: bool, show_descr: bool, skillname: 
         write_to_database(all_data, db_config)
         return
 
-
     if lesson_name:
         if skills:
             get_skills_for_lesson(all_data, lesson_name, skills=True, skillname=False)
         elif skillname:
             get_skills_for_lesson(all_data, lesson_name, skills=False, skillname=True)
+        elif skillsearch:
+            search_courses_by_skill(all_data, lesson_name, skill_extractor, db_config)
         else:
-            print(f"Invalid command format. Use 'skills' or 'skillname' followed by lesson name.")
+            print(f"Invalid command format. Use 'skills' or 'skillname' followed by lesson name, or 'skillsearch' followed by skill.")
     else:
         if show_descr:
             for semester, lessons in all_data.items():
@@ -149,13 +150,15 @@ def main(url: str, simplified: bool, skills: bool, show_descr: bool, skillname: 
     command, lesson_name = display_menu()
 
     if command == 'descr':
-        main(pdf_url, simplified=False, skills=False, show_descr=True, skillname=False, database=False)
+        main(pdf_url, simplified=False, skills=False, show_descr=True, skillname=False, database=False, skillsearch=False)
     elif command == 'skills':
-        main(pdf_url, simplified=False, skills=True, show_descr=False, skillname=False, database=False, lesson_name=lesson_name)
+        main(pdf_url, simplified=False, skills=True, show_descr=False, skillname=False, database=False, skillsearch=False, lesson_name=lesson_name)
     elif command == 'skillname':
-        main(pdf_url, simplified=False, skills=False, show_descr=False, skillname=True, database=False, lesson_name=lesson_name)
+        main(pdf_url, simplified=False, skills=False, show_descr=False, skillname=True, database=False, skillsearch=False, lesson_name=lesson_name)
     elif command == 'simplified':
-        main(pdf_url, simplified=True, skills=False, show_descr=False, skillname=False, database=False)
+        main(pdf_url, simplified=True, skills=False, show_descr=False, skillname=False, database=False, skillsearch=False)
+    elif command == 'skillsearch':
+        main(pdf_url, simplified=False, skills=False, show_descr=False, skillname=False, database=False, skillsearch=True, lesson_name=lesson_name)
     elif command == 'database':
         write_to_database(all_data, db_config)
     elif command == 'exit':
@@ -163,16 +166,16 @@ def main(url: str, simplified: bool, skills: bool, show_descr: bool, skillname: 
         sys.exit(0)
     else:
         print("Invalid choice. Please try again.")
-        main(url, simplified, skills, show_descr, skillname, database, lesson_name)
+        main(url, simplified, skills, show_descr, skillname, database, skillsearch, lesson_name)
 
 if __name__ == "__main__":
     pdf_url = "https://www.uom.gr/assets/site/public/nodes/4254/9477-Program_of_Studies_2020-2021.pdf"
 
-    simplified_mode, skills_mode, show_descr, skillname_mode, database_mode, lesson_name = parse_args()
+    simplified_mode, skills_mode, show_descr, skillname_mode, database_mode, skillsearch_mode, lesson_name = parse_args()
 
     if database_mode:
-        main(pdf_url, simplified=False, skills=False, show_descr=False, skillname=False, database=True)
-    elif simplified_mode or skills_mode or show_descr or skillname_mode:
+        main(pdf_url, simplified=False, skills=False, show_descr=False, skillname=False, database=True, skillsearch=False)
+    elif simplified_mode or skills_mode or show_descr or skillname_mode or skillsearch_mode:
         main(
             pdf_url,
             simplified=simplified_mode,
@@ -180,23 +183,27 @@ if __name__ == "__main__":
             show_descr=show_descr,
             skillname=skillname_mode,
             database=False,
+            skillsearch=skillsearch_mode,
             lesson_name=lesson_name,
         )
     else:
         command, lesson_name = display_menu()
 
         if command == 'database':
-            main(pdf_url, simplified=False, skills=False, show_descr=False, skillname=False, database=True)
+            main(pdf_url, simplified=False, skills=False, show_descr=False, skillname=False, database=True, skillsearch=False)
         elif command == 'descr':
-            main(pdf_url, simplified=False, skills=False, show_descr=True, skillname=False, database=False)
+            main(pdf_url, simplified=False, skills=False, show_descr=True, skillname=False, database=False, skillsearch=False)
         elif command == 'skills':
-            main(pdf_url, simplified=False, skills=True, show_descr=False, skillname=False, database=False, lesson_name=lesson_name)
+            main(pdf_url, simplified=False, skills=True, show_descr=False, skillname=False, database=False, skillsearch=False, lesson_name=lesson_name)
         elif command == 'skillname':
-            main(pdf_url, simplified=False, skills=False, show_descr=False, skillname=True, database=False, lesson_name=lesson_name)
+            main(pdf_url, simplified=False, skills=False, show_descr=False, skillname=True, database=False, skillsearch=False, lesson_name=lesson_name)
+        elif command == 'skillsearch':
+            main(pdf_url, simplified=False, skills=False, show_descr=False, skillname=False, database=False, skillsearch=True, lesson_name=lesson_name)
         elif command == 'simplified':
-            main(pdf_url, simplified=True, skills=False, show_descr=False, skillname=False, database=False)
+            main(pdf_url, simplified=True, skills=False, show_descr=False, skillname=False, database=False, skillsearch=False)
         elif command == 'exit':
             print("Exiting program...")
             sys.exit(0)
         else:
             print("Invalid choice. Please try again.")
+            main(pdf_url, simplified=False, skills=False, show_descr=False, skillname=False, database=False, skillsearch=False)

@@ -5,6 +5,16 @@ from output import print_colored_text, print_horizontal_line, print_loading_line
 
 skill_extractor = SkillExtractor()
 
+def is_database_connected(db_config):
+    try:
+        conn = mysql.connector.connect(**db_config)
+        if conn.is_connected():
+            conn.close()
+            return True
+    except mysql.connector.Error:
+        return False
+    return False
+
 def write_to_database(all_data, db_config):
     try:
         connection = mysql.connector.connect(**db_config)

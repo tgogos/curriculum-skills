@@ -15,7 +15,8 @@ def display_menu():
     print_colored_text("[SLOW] 4. Get Skill Names from URLs (Use 'skillname')", 33)
     print_colored_text(" |__ [SLOW, RECOMMENDED] 4.1. Get Skill Names from URLs (Use 'skillname', exp.'python crawler.py skillname algorithms')", 33)
     print_colored_text("[NEW] 5. Write to Database (Use 'database')", 34)
-    print("6. Exit")
+    print_colored_text("[NEW] 6. Search for a Course by Skill (Use 'skillsearch' followed by skill name)", 35)
+    print("7. Exit")
     print_yellow_line(50)
     choice = input("Enter your choice: ").strip().lower()
 
@@ -34,6 +35,7 @@ def parse_args():
     skillname_mode = False
     lesson_name = None
     database_mode = False
+    skillsearch_mode = False
 
     if len(sys.argv) > 1:
         if sys.argv[1] == "simplified":
@@ -48,6 +50,10 @@ def parse_args():
             skillname_mode = True
             if len(sys.argv) > 2:
                 lesson_name = ' '.join(sys.argv[2:])
+        elif sys.argv[1] == "skillsearch":
+            skillsearch_mode = True
+            if len(sys.argv) > 2:
+                lesson_name = ' '.join(sys.argv[2:])
         elif sys.argv[1] == "database":
             database_mode = True
-    return simplified_mode, skills_mode, show_descr, skillname_mode, database_mode, lesson_name
+    return simplified_mode, skills_mode, show_descr, skillname_mode, database_mode, skillsearch_mode, lesson_name
