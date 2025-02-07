@@ -103,7 +103,6 @@ def search_courses_by_skill(all_data, search_skill, skill_extractor, db_config, 
 
     print_horizontal_line(50)
     print_colored_text(f"Searching for courses related to skill: {search_skill}", 35)
-    print_horizontal_line(50)
 
     found_courses = []
 
@@ -136,6 +135,7 @@ def search_courses_by_skill(all_data, search_skill, skill_extractor, db_config, 
 
     else:
         print_colored_text("Database not connected. Using cache instead.", 33)
+        print_horizontal_line(50)
         cache = load_cache()
 
         for semester, lessons in all_data.items():
@@ -159,8 +159,6 @@ def search_courses_by_skill(all_data, search_skill, skill_extractor, db_config, 
                         cache["skills"] = {}
                     cache["skills"][lesson] = lesson_skills
                     save_cache(cache)
-                else:
-                    print_colored_text(f"Using cached skills for lesson '{lesson}'...", 35)
 
                 for skill_url, skill_name in lesson_skills.items():
                     similarity_score = fuzz.ratio(search_skill.lower(), skill_name.lower())
@@ -168,14 +166,25 @@ def search_courses_by_skill(all_data, search_skill, skill_extractor, db_config, 
                         found_courses.append((semester, lesson, skill_name, similarity_score))
 
     if found_courses:
-        print_horizontal_line(50)
-        print_colored_text("Matching Courses:", 32)
-        print_horizontal_line(50)
+        no_limit1 = True
+        no_limit2 = True
+        no_limit3 = True
         for semester, lesson, matched_skill, score in sorted(found_courses, key=lambda x: x[3], reverse=True):
-            if score >= 70: color = 33
-            elif score >= 56: color = 32
-            else: color = 34
-            print_colored_text(f" {lesson} | Matched Skill: {matched_skill} (Score: {score})", color)
+            if score >= 70 and no_limit1: 
+                print_colored_text(f"Most Accurate Courses (Score >= 70)", 32)
+                print_horizontal_small_line(50)
+                no_limit1 = False
+            elif score >= 56 and score < 70 and no_limit2:
+                print_horizontal_small_line(50)
+                print_colored_text(f"Mediumly Accurate Courses (Score >= 56)", 33)
+                print_horizontal_small_line(50)
+                no_limit2 = False
+            elif score >= 40 and score < 56 and no_limit3: 
+                print_horizontal_small_line(50)
+                print_colored_text(f"Least Accurate Courses (Score >= 52)", 34)
+                print_horizontal_small_line(50)
+                no_limit3 = False
+            print(f" {lesson} | Matched Skill: {matched_skill} (Score: {score})")
         print_horizontal_line(50)
     else:
         print_horizontal_line(50)
