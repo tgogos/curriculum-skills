@@ -1,7 +1,10 @@
+
 import os
 import pdfplumber
 import requests
 import re
+import glob
+from thefuzz import fuzz, process
 from output import print_loading_line
 from helpers import is_cached, load_cache, save_cache, contains_no_lowercase_letters, clean_lesson_name, contains_greek_characters
 from output import print_colored_text
@@ -72,14 +75,12 @@ def split_by_semester(text: str) -> list:
     semesters = re.split(r'(?i)(\b\d+\s*(?:st|nd|rd|th)?\s*Semester\b)', text)
     combined_semesters = []
     seen_semesters = set()
-
     for i in range(1, len(semesters), 2):
-        semester = ''.join(semesters[i:i+2])
-        if semester.lower() not in seen_semesters:
+        semester = ''.join(semesters[i:i+2]).strip()  # Remove leading/trailing whitespace
+        best_match = process.extractOne(semester, list(seen_semesters)) if seen_semesters else None #find best match
+        if best_match is None or best_match[1] < 90:  # Adjust threshold as needed
             combined_semesters.append(semester)
-            seen_semesters.add(semester.lower())
-
-    print(f"Found semesters: {len(combined_semesters)}")
+            seen_semesters.add(semester)
     
     cache = load_cache()
     cache[cache_key] = combined_semesters
@@ -121,3 +122,30 @@ def process_pages_by_lesson(pages: list) -> dict:
                 if lesson_description:
                     lesson_dict[lesson_name] = lesson_description
     return lesson_dict
+
+
+def get_pdf_path():
+    """Searches for PDF files in the 'curriculum' folder and prompts the user to choose."""
+    pdf_files = glob.glob("curriculum/*.pdf")  # Find all PDFs in 'curriculum'
+
+    if not pdf_files:
+        print_colored_text("No PDF files found in the 'curriculum' folder.", 31)
+        return None
+
+    if len(pdf_files) == 1:
+        print_colored_text(f"Found PDF file: {pdf_files[0]}", 32)
+        return pdf_files[0]
+
+    print_colored_text("Multiple PDF files found. Please choose one:", 32)
+    for i, file in enumerate(pdf_files):
+        print(f"{i + 1}. {file}")
+
+    while True:
+        try:
+            choice = int(input("Enter the number of your choice: "))
+            if 1 <= choice <= len(pdf_files):
+                return pdf_files[choice - 1]
+            else:
+                print("Invalid choice. Please try again.")
+        except ValueError:
+            print("Invalid input. Please enter a number.")

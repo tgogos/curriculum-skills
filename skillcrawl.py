@@ -13,14 +13,18 @@ import json
 import mysql.connector
 
 
+
 from database import write_to_database
-from pdf_utils import download_pdf, extract_text_from_pdf, extract_text_after_marker, process_pages_by_lesson, split_by_semester
-from output import print_yellow_line, print_horizontal_line, print_colored_text, print_horizontal_small_line, print_green_line
+from pdf_utils import download_pdf, extract_text_from_pdf, extract_text_after_marker, process_pages_by_lesson, split_by_semester, get_pdf_path
+from output import print_yellow_line, print_horizontal_line, print_colored_text, print_horizontal_small_line, print_green_line, print_loading_line
 from menu import display_menu, parse_args 
 from skills import get_skills_for_lesson, extract_and_get_title, search_courses_by_skill
+from helpers import find_possible_university, load_from_cache, save_to_cache
+from database import write_to_database
 
 CACHE_DIR = 'cache'
 CACHE_FILE = 'pdf_cache.json'
+university_name = None
 
 os.makedirs(CACHE_DIR, exist_ok=True)
 
@@ -30,24 +34,51 @@ import requests
 skill_extractor = SkillExtractor()
 
 
-
-def main(url: str, simplified: bool, skills: bool, show_descr: bool, skillname: bool, database: bool, skillsearch: bool, lesson_name: str = None):
+def main(pdf_file_path: str, simplified: bool, skills: bool, show_descr: bool, skillname: bool, database: bool, skillsearch: bool, lesson_name: str = None):
     print_yellow_line(50)
-    pdf_file_path = 'Program_of_Studies_2020-2021.pdf'
-    pdf_file_path = download_pdf(url, pdf_file_path)
+    if not pdf_file_path:
+        return
 
-    pages = extract_text_from_pdf(pdf_file_path)
+    global university_name
+    if university_name is None:
+        print_colored_text(f"[INITIALIZATION] Searching for University Name inside the provided pdf...", 33)
+        print_loading_line(50)
+        university_name = find_possible_university(pdf_file_path)
 
-    marker = ['Course Outlines', 'Course Content']
-    text_after_marker = extract_text_after_marker(pages, marker)
+    cached_data = load_from_cache(university_name)
 
-    semesters = split_by_semester(text_after_marker)
+    if cached_data:
+        print(f"Loading data from cache for {university_name}...")
+        all_data = cached_data
+    else:
+        print(f"No cache found for {university_name}. Processing PDF...")
+        pages = extract_text_from_pdf(pdf_file_path)
+        university_name = find_possible_university(pdf_file_path)
+        marker = ['Course Outlines', 'Course Content']
+        text_after_marker = extract_text_after_marker(pages, marker)
 
-    all_data = {}
-    for i, semester_text in enumerate(semesters, 1):
-        lessons = process_pages_by_lesson([page for page in pages if page in semester_text])
-        lesson_count = len(lessons)
-        all_data[f'Semester {i} ({lesson_count} lessons)'] = lessons
+        semesters = split_by_semester(text_after_marker)
+
+        all_data = {}
+        for i, semester_text in enumerate(semesters, 1):
+            lessons = process_pages_by_lesson([page for page in pages if page in semester_text])
+            lesson_count = len(lessons)
+            all_data[f'Semester {i} ({lesson_count} lessons)'] = lessons
+
+        for semester, lessons in all_data.items():
+            for lesson, description in lessons.items():
+                skills_list = skill_extractor.get_skills([description])
+                filtered_skills = set()
+                for skill_set in skills_list:
+                    for skill_url in skill_set:
+                        filtered_skills.add(skill_url)
+
+                all_data[semester][lesson] = {
+                    "description": description,
+                    "skills": list(filtered_skills),
+                }
+
+        save_to_cache(university_name, all_data)
 
     db_config = {
         'host': 'localhost',
@@ -62,11 +93,11 @@ def main(url: str, simplified: bool, skills: bool, show_descr: bool, skillname: 
 
     if lesson_name:
         if skills:
-            get_skills_for_lesson(all_data, lesson_name, skills=True, skillname=False)
+            get_skills_for_lesson(university_name, all_data, lesson_name, skills=True, skillname=False)
         elif skillname:
-            get_skills_for_lesson(all_data, lesson_name, skills=False, skillname=True)
+            get_skills_for_lesson(university_name, all_data, lesson_name, skills=False, skillname=True)
         elif skillsearch:
-            search_courses_by_skill(all_data, lesson_name, skill_extractor, db_config)
+            search_courses_by_skill(all_data, lesson_name, skill_extractor, db_config, university_name)
         else:
             print(f"Invalid command format. Use 'skills' or 'skillname' followed by lesson name, or 'skillsearch' followed by skill.")
     else:
@@ -75,9 +106,10 @@ def main(url: str, simplified: bool, skills: bool, show_descr: bool, skillname: 
                 print_horizontal_line(50)
                 print_colored_text(f'{semester}:', 33)
                 print_horizontal_small_line(50)
-                for lesson, description in lessons.items():
+                for lesson, lesson_data in lessons.items():
                     print(f'  {lesson}')
                     print_horizontal_small_line(25)
+                    description = lesson_data.get("description")
                     if description == "This lesson has no data!":
                         print_colored_text(f'    {description}', "31")
                     else:
@@ -88,53 +120,137 @@ def main(url: str, simplified: bool, skills: bool, show_descr: bool, skillname: 
                 print_horizontal_line(50)
                 print_colored_text(f'{semester}:', 33)
                 print_horizontal_small_line(50)
-                for lesson, description in lessons.items():
-                    print(f'  {lesson}')
+                for lesson_name, lesson_data in lessons.items():
+                    print(f'   {lesson_name}')
                     print_horizontal_small_line(25)
 
-                    skills_list = skill_extractor.get_skills([description])
+                    lesson_cache = cached_data.get(semester, {}).get(lesson_name, {})  # Get cached data
+                    cached_skills = lesson_cache.get("skills")  # Get cached skills
+                    cached_skill_names = lesson_cache.get("skill_names") # Get cached skill names
 
-                    filtered_skills = set()
-                    for skill_set in skills_list:
-                        for skill_url in skill_set:
-                            filtered_skills.add(skill_url)
+                    if cached_skills and cached_skill_names:  # If BOTH skills and skill_names are in the cache
+                        print_colored_text(f'    Skills (from cache):', "32")
+                        print_green_line(50)
+                        for skill_url in cached_skills:
+                            print_colored_text(f'        Skill URL: {skill_url}', "32")
+                            print_green_line(50)
+                            print_colored_text(f'    Skill Names (from cache):', "32")
+                            print_green_line(50)
+                        continue
+
+                    lesson_description = lesson_data.get("description", "")
+
+                    if isinstance(lesson_description, dict):
+                        lesson_description = lesson_description.get("text", "")
+
+                    if isinstance(lesson_description, str):
+                        skills_list = skill_extractor.get_skills([lesson_description])
+                        filtered_skills = set()
+                        filtered_skill_names = set()
+
+                        for skill_set in skills_list:
+                            for skill_url in skill_set:
+                                filtered_skills.add(skill_url)
+                                skill_name = extract_and_get_title(skill_url)
+                            if skill_name:
+                                filtered_skill_names.add(skill_name)
 
                     if filtered_skills:
                         print_colored_text(f'    Skills:', "32")
                         print_green_line(50)
                         for skill_url in filtered_skills:
-                            print_colored_text(f'      Skill URL: {skill_url}', "32")
+                            print_colored_text(f'        Skill URL: {skill_url}', "32")
                         print_green_line(50)
+
+                        if cached_data:
+                            if semester not in cached_data:
+                                cached_data[semester] = {}
+                            if "skills" not in cached_data[semester].get(lesson_name, {}):
+                                cached_data[semester][lesson_name] = cached_data[semester].get(lesson_name, {})
+                            cached_data[semester][lesson_name]["skills"] = list(filtered_skills)
+                        save_to_cache(university_name, cached_data)
+
                     else:
                         print_colored_text(f'    No skills found', "31")
-                    print_horizontal_small_line(25)
+                else:
+                    print(f"Warning: Description for {lesson_name} is not a string. Skipping skill extraction.")
+
+            print_horizontal_small_line(25)
 
         elif skillname:
             for semester, lessons in all_data.items():
                 print_horizontal_line(50)
                 print_colored_text(f'{semester}:', 33)
                 print_horizontal_small_line(50)
-                for lesson, description in lessons.items():
-                    print(f'  {lesson}')
+                for lesson_name, lesson_data in lessons.items():
+                    print(f'   {lesson_name}')
                     print_horizontal_small_line(25)
 
-                    skills_list = skill_extractor.get_skills([description])
+                    lesson_cache = cached_data.get(semester, {}).get(lesson_name, {})
+                    cached_skill_names = lesson_cache.get("skill_names")
+                    cached_skills = lesson_cache.get("skills") # Get the URLs from the cache
 
-                    filtered_skills = set()
-                    for skill_set in skills_list:
-                        for skill_url in skill_set:
-                            filtered_skills.add(skill_url)
+                    if cached_skill_names:  # If skill_names are in the cache
+                        print_colored_text(f'    Skill Names (from cache):', "32")
+                        print_green_line(50)
+                        for skill_name in cached_skill_names:
+                            print_colored_text(f'        [Skill]: {skill_name}', "32")
+                        print_green_line(50)
+                        print_horizontal_small_line(25)
+                        continue 
 
-                    if filtered_skills:
-                        print_colored_text(f'    Skill Names:', "32")
-                        print_green_line(50)
-                        for skill_url in filtered_skills:
-                            skill_name = extract_and_get_title(skill_url)
-                            if skill_name:
-                                print_colored_text(f'      [Skill]: {skill_name}', "32")
-                        print_green_line(50)
+
+                    lesson_description = lesson_data.get("description", "")
+
+                    if isinstance(lesson_description, dict):
+                        lesson_description = lesson_description.get("text", "")
+
+                    if isinstance(lesson_description, str):
+                        skills_list = skill_extractor.get_skills([lesson_description])
+                        filtered_skills = set()
+                        filtered_skill_names = set()
+                        
+
+                        for skill_set in skills_list:
+                            for skill_url in skill_set:
+                                filtered_skills.add(skill_url)
+                                skill_name = extract_and_get_title(skill_url)
+                                if skill_name:
+                                    filtered_skill_names.add(skill_name)
+
+                        if filtered_skill_names:
+                            print_colored_text(f'    Skill Names:', "32")
+                            print_green_line(50)
+                            for skill_name in filtered_skill_names:
+                                print_colored_text(f'        [Skill]: {skill_name}', "32")
+                            print_green_line(50)
+
+
+                        elif filtered_skills and not filtered_skill_names:
+                            print_colored_text(f'    Skill Names (Extracted from URLs):', "32")
+                            print_green_line(50)
+                            for skill_url in filtered_skills:
+                                skill_name = extract_and_get_title(skill_url)
+                                if skill_name:
+                                    filtered_skill_names.add(skill_name)
+                                    print_colored_text(f'        [Skill]: {skill_name}', "32")
+                            print_green_line(50)
+                            if cached_data:
+                                if semester not in cached_data:
+                                    cached_data[semester] = {}
+                                if "skill_names" not in cached_data[semester].get(lesson_name, {}):
+                                    cached_data[semester][lesson_name] = cached_data[semester].get(lesson_name, {})
+                                cached_data[semester][lesson_name]["skill_names"] = list(filtered_skill_names)
+                                if "skills" not in cached_data[semester].get(lesson_name, {}):
+                                    cached_data[semester][lesson_name] = cached_data[semester].get(lesson_name, {})
+                                cached_data[semester][lesson_name]["skills"] = list(filtered_skills)
+                                save_to_cache(university_name, cached_data)
+
+                        else:
+                            print_colored_text(f'    No skills found!', "31")
                     else:
-                        print_colored_text(f'    No skills found!', "31")
+                        print(f"Warning: Description for {lesson_name} is not a string. Skipping skill extraction.")
+
                     print_horizontal_small_line(25)
 
         elif simplified:
@@ -150,15 +266,15 @@ def main(url: str, simplified: bool, skills: bool, show_descr: bool, skillname: 
     command, lesson_name = display_menu()
 
     if command == 'descr':
-        main(pdf_url, simplified=False, skills=False, show_descr=True, skillname=False, database=False, skillsearch=False)
+        main(pdf_file_path, simplified=False, skills=False, show_descr=True, skillname=False, database=False, skillsearch=False)
     elif command == 'skills':
-        main(pdf_url, simplified=False, skills=True, show_descr=False, skillname=False, database=False, skillsearch=False, lesson_name=lesson_name)
+        main(pdf_file_path, simplified=False, skills=True, show_descr=False, skillname=False, database=False, skillsearch=False, lesson_name=lesson_name)
     elif command == 'skillname':
-        main(pdf_url, simplified=False, skills=False, show_descr=False, skillname=True, database=False, skillsearch=False, lesson_name=lesson_name)
+        main(pdf_file_path, simplified=False, skills=False, show_descr=False, skillname=True, database=False, skillsearch=False, lesson_name=lesson_name)
     elif command == 'simplified':
-        main(pdf_url, simplified=True, skills=False, show_descr=False, skillname=False, database=False, skillsearch=False)
+        main(pdf_file_path, simplified=True, skills=False, show_descr=False, skillname=False, database=False, skillsearch=False)
     elif command == 'skillsearch':
-        main(pdf_url, simplified=False, skills=False, show_descr=False, skillname=False, database=False, skillsearch=True, lesson_name=lesson_name)
+        main(pdf_file_path, simplified=False, skills=False, show_descr=False, skillname=False, database=False, skillsearch=True, lesson_name=lesson_name)
     elif command == 'database':
         write_to_database(all_data, db_config)
     elif command == 'exit':
@@ -168,42 +284,52 @@ def main(url: str, simplified: bool, skills: bool, show_descr: bool, skillname: 
         print("Invalid choice. Please try again.")
         main(url, simplified, skills, show_descr, skillname, database, skillsearch, lesson_name)
 
+
+    
+
 if __name__ == "__main__":
-    pdf_url = "https://www.uom.gr/assets/site/public/nodes/4254/9477-Program_of_Studies_2020-2021.pdf"
+    pdf_file_path = get_pdf_path() # Get the PDF path from the user
 
-    simplified_mode, skills_mode, show_descr, skillname_mode, database_mode, skillsearch_mode, lesson_name = parse_args()
+    if pdf_file_path:  # Proceed only if a PDF file path was returned
+        simplified_mode, skills_mode, show_descr, skillname_mode, database_mode, skillsearch_mode, lesson_name = parse_args()
 
-    if database_mode:
-        main(pdf_url, simplified=False, skills=False, show_descr=False, skillname=False, database=True, skillsearch=False)
-    elif simplified_mode or skills_mode or show_descr or skillname_mode or skillsearch_mode:
-        main(
-            pdf_url,
-            simplified=simplified_mode,
-            skills=skills_mode,
-            show_descr=show_descr,
-            skillname=skillname_mode,
-            database=False,
-            skillsearch=skillsearch_mode,
-            lesson_name=lesson_name,
-        )
-    else:
-        command, lesson_name = display_menu()
-
-        if command == 'database':
-            main(pdf_url, simplified=False, skills=False, show_descr=False, skillname=False, database=True, skillsearch=False)
-        elif command == 'descr':
-            main(pdf_url, simplified=False, skills=False, show_descr=True, skillname=False, database=False, skillsearch=False)
-        elif command == 'skills':
-            main(pdf_url, simplified=False, skills=True, show_descr=False, skillname=False, database=False, skillsearch=False, lesson_name=lesson_name)
-        elif command == 'skillname':
-            main(pdf_url, simplified=False, skills=False, show_descr=False, skillname=True, database=False, skillsearch=False, lesson_name=lesson_name)
-        elif command == 'skillsearch':
-            main(pdf_url, simplified=False, skills=False, show_descr=False, skillname=False, database=False, skillsearch=True, lesson_name=lesson_name)
-        elif command == 'simplified':
-            main(pdf_url, simplified=True, skills=False, show_descr=False, skillname=False, database=False, skillsearch=False)
-        elif command == 'exit':
-            print("Exiting program...")
-            sys.exit(0)
+        if database_mode:
+            main(pdf_file_path, simplified=False, skills=False, show_descr=False, skillname=False, database=True, skillsearch=False)
+        elif simplified_mode or skills_mode or show_descr or skillname_mode or skillsearch_mode:
+            main(
+                pdf_file_path,  # Correctly pass pdf_file_path
+                simplified=simplified_mode,
+                skills=skills_mode,
+                show_descr=show_descr,
+                skillname=skillname_mode,
+                database=False,
+                skillsearch=skillsearch_mode,
+                lesson_name=lesson_name,
+            )
         else:
-            print("Invalid choice. Please try again.")
-            main(pdf_url, simplified=False, skills=False, show_descr=False, skillname=False, database=False, skillsearch=False)
+            while True:  # Loop for valid menu input
+                command, lesson_name = display_menu()
+
+                if command == 'database':
+                    main(pdf_file_path, simplified=False, skills=False, show_descr=False, skillname=False, database=True, skillsearch=False)
+                    break  # Exit loop after command execution
+                elif command == 'descr':
+                    main(pdf_file_path, simplified=False, skills=False, show_descr=True, skillname=False, database=False, skillsearch=False)
+                    break
+                elif command == 'skills':
+                    main(pdf_file_path, simplified=False, skills=True, show_descr=False, skillname=False, database=False, skillsearch=False, lesson_name=lesson_name)
+                    break
+                elif command == 'skillname':
+                    main(pdf_file_path, simplified=False, skills=False, show_descr=False, skillname=True, database=False, skillsearch=False, lesson_name=lesson_name)
+                    break
+                elif command == 'skillsearch':
+                    main(pdf_file_path, simplified=False, skills=False, show_descr=False, skillname=False, database=False, skillsearch=True, lesson_name=lesson_name)
+                    break
+                elif command == 'simplified':
+                    main(pdf_file_path, simplified=True, skills=False, show_descr=False, skillname=False, database=False, skillsearch=False)
+                    break
+                elif command == 'exit':
+                    print("Exiting program...")
+                    sys.exit(0)
+                else:
+                    print("Invalid choice. Please try again.")
