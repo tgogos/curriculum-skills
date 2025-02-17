@@ -40,25 +40,25 @@
         "ALGORITHMS- CS-IS": {
             "description": "The student will (a) learn the algorithmic thought, (b) gain familiarity with basic algorithms for sorting\nand searching and (c) be able to implement these algorithms in C.\n\n1. Algorithms and Problems. Historical review, Definitions and properties of Algorithms, Computational\nproblems, Description of algorithms, Basic concepts of algorithms (Iterative, Recursive, Stochastic,\nHeuristic).\n2. Iterative Sorting Algorithms. Selection Sort, Bucket Sort, Bubble Sort, Radix Sort.\n3. Searching Algorithms: Linear Search, Binary Search.\n4. Data Structures: Stack, Queue, Cyclic queue, Linked lists (single and double), Heaps, Heap Sort.\n5. Recursive Algorithms: Factorial, Fibonacci Numbers, Anoi Towers, Transformation from recursive to\niterative.\n6. Divide and conquer: Quick Sort, Merge Sort, Matrix Multiplication, Strassen Multiplication, Polynomial\nMultiplication.\n7. Graph Algorithms: Depth First Search, Breadth First Search, Graph connectivity, Directed acyclic\ngraphs.\n8. Special Topics on Algorithms: Οn-line algorithms, Dynamic Programming, Greedy algorithms,\nBacktracking, Branch and Bound.\n9. Laboratory. Implementation of basic sorting and searching algorithms using C.",
             "skills": [
-                "http://data.europa.eu/esco/skill/fecf8a0d-62c4-4e71-9b03-0f4fc2ad7bf5",
-                "http://data.europa.eu/esco/skill/3fc5a30d-d493-44ed-a2b5-ff9a50f84de3",
                 "http://data.europa.eu/esco/skill/5b26f08b-88bc-45f0-b901-530d7786466b",
+                "http://data.europa.eu/esco/skill/3fc5a30d-d493-44ed-a2b5-ff9a50f84de3",
+                "http://data.europa.eu/esco/skill/e439742d-558d-4f52-885e-afdc740b48cf",
+                "http://data.europa.eu/esco/skill/fecf8a0d-62c4-4e71-9b03-0f4fc2ad7bf5",
+                "http://data.europa.eu/esco/skill/720623d3-362c-4685-bb1c-1c4a82f22dfe",
                 "http://data.europa.eu/esco/skill/19ba11f3-9c99-41fd-a7c9-f77e6a026186",
                 "http://data.europa.eu/esco/skill/35f1dcdc-577f-46c6-96d9-6c7a64501de9",
-                "http://data.europa.eu/esco/skill/e439742d-558d-4f52-885e-afdc740b48cf",
-                "http://data.europa.eu/esco/skill/33d49d4f-31ec-473f-9b8a-b555aa5116bb",
-                "http://data.europa.eu/esco/skill/720623d3-362c-4685-bb1c-1c4a82f22dfe",
-                "http://data.europa.eu/esco/skill/fa2ea1d0-0d7e-4834-a70f-a35011509c2e"
+                "http://data.europa.eu/esco/skill/fa2ea1d0-0d7e-4834-a70f-a35011509c2e",
+                "http://data.europa.eu/esco/skill/33d49d4f-31ec-473f-9b8a-b555aa5116bb"
             ],
             "skill_names": [
                 "laboratory equipment",
-                "solve bank account problems",
-                "manage selection of breeding stock",
-                "carry out work-related calculations",
                 "browse, search and filter data, information and digital content",
+                "solve bank account problems",
                 "transcreation",
+                "carry out work-related calculations",
                 "Iterative development",
-                "data models"
+                "data models",
+                "manage selection of breeding stock"
             ]
         },
         "COMPUTER SYSTEMS- CS-IS": {
@@ -1063,26 +1063,26 @@
         "ALGORITHM ANALYSIS- CS": {
             "description": "By the completion of the course the student will be acquainted with the basic mathematical concepts for\nalgorithm analysis, will be able to compare the theoretical complexities of the algorithms and apply the\nbasic methodology in developing efficient algorithms.\n\n1. The concepts of computational problem and algorithm. The detailed and simplified computational\nmodel. Examples.\n2. Asymptotic analysis. The asymptotic symbols Ο, Θ, Ω. Properties of the asymptotic symbols. The\nvalue of Algorithm analysis. The concept of algorithm complexity (Worst, best and average case)\n3. Analysis of iterative algorithms\n4. Analysis of recursive and divide and conquer algorithms\n5. Searching. Algorithms of Sequential searching and Binary. Complexity analysis.\n6. Sorting Algorithms Ι: Insertion sort, Selection. Complexity analysis (Worst, best and average).\n7. Sorting Algorithms ΙΙ: Quicksort, Mergsort, Complexity analysis (Worst, best and average). Shell\nsort. Complexity analysis. Comparing sorting algorithms.\n8. Sorting Algorithms ΙΙΙ: Counting sort. Radix sort. Complexity analysis\n9. Limits in sorting algorithms. Medians and Order statistics.\n10. Heaps: Max heap, Heapsort, MinMax heap, Double-ended heap (Deap). Complexity analysis\n11. Graphs. Fundamental concepts. Breath first search, Depth first search, Topological order. Minimum\nSpanning Trees, Prim and Kruskal algorithm. Shortest paths, Shortest paths algorithms - Bellman-Ford,\nDijkstra, Floyd. Complexity analysis.",
             "skills": [
-                "http://data.europa.eu/esco/skill/71a6ac5f-f220-4bdc-95b7-b1b2e640fec5",
+                "http://data.europa.eu/esco/skill/02e22093-3436-46a8-8dc5-b041bc4800cc",
                 "http://data.europa.eu/esco/skill/5b26f08b-88bc-45f0-b901-530d7786466b",
+                "http://data.europa.eu/esco/skill/798d427e-51b3-4cd4-8b24-1357015e9ae7",
+                "http://data.europa.eu/esco/skill/54924a2c-daca-40d3-9716-4b38ceb04f38",
+                "http://data.europa.eu/esco/skill/71a6ac5f-f220-4bdc-95b7-b1b2e640fec5",
                 "http://data.europa.eu/esco/skill/5d74614d-32c8-4ca4-9818-6980e52424b1",
                 "http://data.europa.eu/esco/skill/9a58cd26-58eb-4a1c-b1b6-64037fe9cfa1",
                 "http://data.europa.eu/esco/skill/e439742d-558d-4f52-885e-afdc740b48cf",
-                "http://data.europa.eu/esco/skill/54924a2c-daca-40d3-9716-4b38ceb04f38",
-                "http://data.europa.eu/esco/skill/798d427e-51b3-4cd4-8b24-1357015e9ae7",
-                "http://data.europa.eu/esco/skill/c609c7cf-ec3f-42df-9147-3ea012e31b66",
-                "http://data.europa.eu/esco/skill/02e22093-3436-46a8-8dc5-b041bc4800cc",
-                "http://data.europa.eu/esco/skill/720623d3-362c-4685-bb1c-1c4a82f22dfe"
+                "http://data.europa.eu/esco/skill/720623d3-362c-4685-bb1c-1c4a82f22dfe",
+                "http://data.europa.eu/esco/skill/c609c7cf-ec3f-42df-9147-3ea012e31b66"
             ],
             "skill_names": [
-                "manage selection of breeding stock",
-                "arrange ordering of products for customers",
-                "browse, search and filter data, information and digital content",
+                "teach mathematics",
                 "optimize  production",
+                "create model",
+                "browse, search and filter data, information and digital content",
+                "arrange ordering of products for customers",
                 "plan software testing",
                 "algorithms",
-                "create model",
-                "teach mathematics"
+                "manage selection of breeding stock"
             ]
         },
         "SOFTWARE ENGINEERING- CS": {
@@ -2723,8 +2723,8 @@
         "CRYPTOGRAPHY- AI": {
             "description": "Introduction to modern cryptology.\n\nClassical cryptography - simple cryptosystems. Cryptanalysis. Cryptographic hash functions. Symmetric\ncryptography. Asymmetric cryptography. Key management. Digital signatures. Cryptographic protocols.",
             "skills": [
-                "http://data.europa.eu/esco/skill/07884056-a07a-40b7-bba3-1ceed61f529c",
                 "http://data.europa.eu/esco/skill/e5beeff8-7c98-490a-ae2c-16fbb6a87305",
+                "http://data.europa.eu/esco/skill/07884056-a07a-40b7-bba3-1ceed61f529c",
                 "http://data.europa.eu/esco/skill/f0163b63-6794-4eb7-b17b-f91d11b2602d"
             ],
             "skill_names": []
