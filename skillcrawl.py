@@ -367,6 +367,7 @@ if __name__ == "__main__":
     pdf_file_path = get_pdf_path() # Get the PDF path from the user
     if pdf_file_path in university_cache:
         university_name = university_cache[pdf_file_path]
+        university_country = get_university_country(university_name)
     else:
         print_colored_text(f"[INITIALIZATION] Searching for University Name inside the provided PDF...", 33)
         print_loading_line(50)
