@@ -4,10 +4,11 @@ import pdfplumber
 import requests
 import re
 import glob
+import json
 from thefuzz import fuzz, process
 from output import print_loading_line
 from helpers import is_cached, load_cache, save_cache, contains_no_lowercase_letters, clean_lesson_name, contains_greek_characters
-from output import print_colored_text
+from output import print_colored_text, print_green_line
 
 
 def download_pdf(url: str, save_path: str) -> str:
@@ -124,24 +125,45 @@ def process_pages_by_lesson(pages: list) -> dict:
     return lesson_dict
 
 
+def get_university_name_mapping():
+    """Reads the 'university_cache.json' and returns a mapping of PDF paths to university names."""
+    try:
+        with open('university_cache.json', 'r') as file:
+            return json.load(file)  # Return the mapping of paths to university names
+    except FileNotFoundError:
+        print("University cache file not found. Using default names.")
+        return {}
+    except json.JSONDecodeError:
+        print("Error reading the university cache file. Using default names.")
+        return {}
+
+
 def get_pdf_path():
     """Searches for PDF files in the 'curriculum' folder and prompts the user to choose."""
     pdf_files = glob.glob("curriculum/*.pdf")  # Find all PDFs in 'curriculum'
+    university_mapping = get_university_name_mapping()  # Get the mapping of PDF files to universities
 
     if not pdf_files:
         print_colored_text("No PDF files found in the 'curriculum' folder.", 31)
         return None
 
     if len(pdf_files) == 1:
-        print_colored_text(f"Found PDF file: {pdf_files[0]}", 32)
+        university_name = university_mapping.get(pdf_files[0], 'Unknown University')  # Default if not found
+        print_colored_text(f"University: {university_name} - Found PDF file: {pdf_files[0]}", 32)
         return pdf_files[0]
 
+    print_green_line(30)
     print_colored_text("Multiple PDF files found. Please choose one:", 32)
+    print_green_line(30)
+
     for i, file in enumerate(pdf_files):
-        print(f"{i + 1}. {file}")
+        # Use the mapping to get the university name or default to 'Unknown University'
+        university_name = university_mapping.get(file, 'Unknown University')
+        print(f"{i + 1}. [{university_name}] - {file}")  # Display university name before the file path
 
     while True:
         try:
+            print_green_line(30)
             choice = int(input("Enter the number of your choice: "))
             if 1 <= choice <= len(pdf_files):
                 return pdf_files[choice - 1]
