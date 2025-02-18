@@ -1121,35 +1121,35 @@
                 "http://data.europa.eu/esco/skill/9a58cd26-58eb-4a1c-b1b6-64037fe9cfa1"
             ],
             "skill_names": [
-                "software metrics",
-                "oversee development of software",
-                "create solutions to problems",
-                "malting process",
-                "information structure",
-                "project management",
-                "verify feasibility",
-                "assign codes to product items",
-                "utilize methodologies for user centered design",
-                "unified modeling  language",
-                "authoring software",
-                "software architecture models",
-                "execute software tests",
-                "interact with users to gather requirements",
-                "C++",
-                "provide user documentation",
-                "maintain nets",
-                "design process",
-                "analyze  texts to be illustrated",
                 "manage a team",
-                "speak different languages",
-                "assess operating cost",
-                "systems development life-cycle",
-                "utilize computer-aided software engineering tools",
+                "provide user documentation",
+                "interact with users to gather requirements",
+                "malting process",
+                "create solutions to problems",
                 "sell products",
+                "systems development life-cycle",
+                "examine engineering principles",
+                "utilize computer-aided software engineering tools",
+                "oversee development of software",
+                "information structure",
+                "assign codes to product items",
                 "write specifications",
                 "Incremental development",
                 "solve technical problems",
-                "examine engineering principles"
+                "authoring software",
+                "C++",
+                "verify feasibility",
+                "maintain nets",
+                "speak different languages",
+                "software metrics",
+                "software architecture models",
+                "assess operating cost",
+                "execute software tests",
+                "project management",
+                "utilize methodologies for user centered design",
+                "design process",
+                "analyze  texts to be illustrated",
+                "unified modeling  language"
             ]
         },
         "FINANCIAL MANAGEMENT- IS": {
@@ -2723,9 +2723,9 @@
         "CRYPTOGRAPHY- AI": {
             "description": "Introduction to modern cryptology.\n\nClassical cryptography - simple cryptosystems. Cryptanalysis. Cryptographic hash functions. Symmetric\ncryptography. Asymmetric cryptography. Key management. Digital signatures. Cryptographic protocols.",
             "skills": [
+                "http://data.europa.eu/esco/skill/f0163b63-6794-4eb7-b17b-f91d11b2602d",
                 "http://data.europa.eu/esco/skill/e5beeff8-7c98-490a-ae2c-16fbb6a87305",
-                "http://data.europa.eu/esco/skill/07884056-a07a-40b7-bba3-1ceed61f529c",
-                "http://data.europa.eu/esco/skill/f0163b63-6794-4eb7-b17b-f91d11b2602d"
+                "http://data.europa.eu/esco/skill/07884056-a07a-40b7-bba3-1ceed61f529c"
             ],
             "skill_names": []
         },
@@ -3711,12 +3711,12 @@
                 "http://data.europa.eu/esco/skill/7a34b3d9-bd3b-4f4e-a0f6-f97439901cb7"
             ],
             "skill_names": [
-                "apply scientific methods",
-                "assess students",
-                "software metrics",
                 "software architecture models",
+                "arrange student accommodation",
                 "quality assurance methodologies",
-                "arrange student accommodation"
+                "apply scientific methods",
+                "software metrics",
+                "assess students"
             ]
         },
         "TAXATION FOR INDIVIDUALS AND BUSINESS ENTITIES- AI": {
