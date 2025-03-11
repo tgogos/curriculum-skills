@@ -1,6 +1,14 @@
 {
-    "curriculum\\module-overviews-first-year-computing.pdf": "First Year University",
-    "curriculum\\UTeach CSA Course Syllabus and Planning Guide.pdf": "Buck Institute",
-    "curriculum\\Program_of_Studies_2020-2021.pdf": "University of Macedonia",
-    "curriculum\\CSC148H1-Winter2024.pdf": "University of Toronto Code"
+    "University of Groningen": {
+        "name": "University of Groningen",
+        "country": "Netherlands"
+    },
+    "Imperial College": {
+        "name": "Imperial College",
+        "country": "United Kingdom"
+    },
+    "University of Macedonia": {
+        "name": "University of Macedonia",
+        "country": "Greece"
+    }
 }

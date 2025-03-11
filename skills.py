@@ -2,117 +2,111 @@ import json
 import requests
 from esco_skill_extractor import SkillExtractor
 import mysql.connector
-from fuzzywuzzy import fuzz
-from helpers import load_from_cache, save_to_cache
+from fuzzywuzzy import fuzz, process
+from helpers import load_from_cache, save_to_cache, load_university_cache
 from output import print_colored_text, print_horizontal_line, print_loading_line, print_horizontal_small_line, print_green_line
+import os
 
 skill_extractor = SkillExtractor()
 
+def list_available_cached_universities():
+    """
+    Retrieves the list of available universities from university_cache.json.
+    """
+    university_cache = load_university_cache()
+    return list(university_cache.keys())
 
 
+CACHE_DIR = 'cache'
+CACHE_FILE = 'pdf_cache.json'
 
-def get_skills_for_lesson(university_name, all_data, lesson_name, skills=False, skillname=False, threshold=80, use_cache=True):
-    cache = load_from_cache(university_name)
-    cache_key = lesson_name.lower()
+def save_cache(data):
+    cache_file_path = os.path.join(CACHE_DIR, CACHE_FILE)
+    with open(cache_file_path, 'w') as cache_file:
+        json.dump(data, cache_file, indent=4)
 
-    # Check for just skills
-    if use_cache and cache_key in cache and "skills" in cache[cache_key]:
-        cached_skills = cache[cache_key]["skills"]
-        print_colored_text(f"Using cached skills for '{lesson_name}'", 33)
-        print_horizontal_small_line(50)
-        for skill_url in cached_skills:
-            print_colored_text(f'    Skill URL: {skill_url}', "32")
-        return
 
-    # Check for just skill names
-    if use_cache and cache_key in cache and "skill_names" in cache[cache_key]:
-        cached_skill_names = cache[cache_key]["skill_names"]
-        print_colored_text(f"Using cached skill names for '{lesson_name}'", 33)
-        print_horizontal_small_line(50)
-        for skill_name in cached_skill_names:
-            print_colored_text(f'    Skill Name: {skill_name}', "32")
-        return
+from mysql.connector import Error
 
-    for semester, lessons in all_data.items():
-        matched_lessons = [(lesson, fuzz.partial_ratio(lesson_name.lower(), lesson.lower())) for lesson in lessons]
-        matched_lessons = [lesson for lesson, score in matched_lessons if score >= threshold]
+def get_skills_for_lesson(university_name, all_data, lesson_name=None, skillname=True, db_config=None):
+    results = {}
+    try:
+        connection = mysql.connector.connect(**db_config)
+        cursor = connection.cursor(dictionary=True)
 
-        if matched_lessons:
-            print_horizontal_line(50)
-            print_colored_text(f'{semester}:', 33)
-            print_horizontal_small_line(50)
-
-            for matched_lesson in matched_lessons:  # Iterate through the matched lessons
-                lesson_data = lessons[matched_lesson]
-                lesson_description = lesson_data.get("description", "")  # Safe access
-                print(f'   {matched_lesson}')  # Use the matched lesson name
-                print_horizontal_small_line(25)
-
-                skills_list = skill_extractor.get_skills([lesson_description])  # Your skill extraction
-                filtered_skills = set()
-                filtered_skill_names = set()
-
-                for skill_set in skills_list:
-                    for skill_url in skill_set:
-                        filtered_skills.add(skill_url)
-                        skill_name = extract_and_get_title(skill_url)  # Extract name early
-                        if skill_name:
-                            filtered_skill_names.add(skill_name)
-
-                if skills:  # Handle skills (URLs) - Only if skills=True
-                    if filtered_skills:
-                        print_colored_text(f'    Skills:', "32")
-                        print_green_line(50)
-                        for skill_url in filtered_skills:
-                            print_colored_text(f'        Skill URL: {skill_url}', "32")
-                        print_green_line(50)
-
-                        if use_cache:
-                            if semester not in cache:
-                                cache[semester] = {}
-                            if "skills" not in cache[semester].get(matched_lesson, {}): # Check if skills key exists
-                                cache[semester][matched_lesson] = cache[semester].get(matched_lesson, {}) # initialize to empty dict if matched_lesson key is not present
-                            cache[semester][matched_lesson]["skills"] = list(filtered_skills) # Update only the skills
-                            save_to_cache(university_name, cache)
-
-                    else:
-                        print_colored_text(f'    No skills found', "31")
-
-                if skillname:  # Handle skill names - Only if skillname=True
-                    if filtered_skill_names:
-                        print_colored_text(f'    Skill Names:', "32")
-                        print_green_line(50)
-                        for skill_name in filtered_skill_names:
-                            print_colored_text(f'        [Skill]: {skill_name}', "32")
-                        print_green_line(50)
-
-                        if use_cache:
-                            if semester not in cache:
-                                cache[semester] = {}
-                            if "skill_names" not in cache[semester].get(matched_lesson, {}): # Check if skill_names key exists
-                                cache[semester][matched_lesson] = cache[semester].get(matched_lesson, {}) # initialize to empty dict if matched_lesson key is not present
-                            cache[semester][matched_lesson]["skill_names"] = list(filtered_skill_names) # Update only the skill_names
-                            save_to_cache(university_name, cache)
-                    elif filtered_skills and not filtered_skill_names: #If skillname is true but no skill_names were found, extract them from the URLs
-                        print_colored_text(f'    Skill Names (Extracted from URLs):', "32")
-                        print_green_line(50)
-                        for skill_url in filtered_skills:
-                            skill_name = extract_and_get_title(skill_url)
-                            if skill_name:
-                                filtered_skill_names.add(skill_name)
-                                print_colored_text(f'        [Skill]: {skill_name}', "32")
-                        print_green_line(50)
-                        if use_cache:
-                            if semester not in cache:
-                                cache[semester] = {}
-                            if "skill_names" not in cache[semester].get(matched_lesson, {}): # Check if skill_names key exists
-                                cache[semester][matched_lesson] = cache[semester].get(matched_lesson, {}) # initialize to empty dict if matched_lesson key is not present
-                            cache[semester][matched_lesson]["skill_names"] = list(filtered_skill_names) # Update only the skill_names
-                            save_to_cache(university_name, cache)
-
+        cursor.execute("SELECT university_name FROM University")
+        university_list = [row['university_name'] for row in cursor.fetchall()]
+        
+        if university_name:
+            best_match = process.extractOne(university_name, university_list)
+            if best_match and best_match[1] > 80:  # Confidence threshold
+                university_name = best_match[0]
+            else:
+                return {}
+        
+        if university_name and lesson_name:
+            # Case 1: Specific university and lesson
+            query = """
+                SELECT u.university_name, l.lesson_name, s.skill_name FROM Skills s
+                JOIN Lessons l ON s.lesson_id = l.lesson_id
+                JOIN University u ON l.university_id = u.university_id
+                WHERE u.university_name LIKE %s AND l.lesson_name LIKE %s
+            """
+            cursor.execute(query, (university_name, f"%{lesson_name}%"))
+        
+        elif lesson_name:
+            # Case 2: Any university, specific lesson
+            query = """
+                SELECT u.university_name, l.lesson_name, s.skill_name FROM Skills s
+                JOIN Lessons l ON s.lesson_id = l.lesson_id
+                JOIN University u ON l.university_id = u.university_id
+                WHERE l.lesson_name LIKE %s 
+            """
+            cursor.execute(query, (f"%{lesson_name}%",))
+        
+        elif university_name:
+            # Case 4: Specific university, all lessons
+            query = """
+                SELECT u.university_name, l.lesson_name, s.skill_name FROM Skills s
+                JOIN Lessons l ON s.lesson_id = l.lesson_id
+                JOIN University u ON l.university_id = u.university_id
+                WHERE u.university_name LIKE %s
+            """
+            cursor.execute(query, (university_name,))
+        
         else:
-            print(f"Lesson '{lesson_name}' not found in {semester}")
-    print_horizontal_line(25)
+            # Case 3: All universities, all lessons
+            query = """
+                SELECT u.university_name, l.lesson_name, s.skill_name FROM Skills s
+                JOIN Lessons l ON s.lesson_id = l.lesson_id
+                JOIN University u ON l.university_id = u.university_id
+            """
+            cursor.execute(query)
+        
+        rows = cursor.fetchall()
+        for row in rows:
+            uni = row['university_name']
+            lesson = row['lesson_name']
+            skill = row['skill_name']
+
+            if skill.lower() == "unknown skill":  
+                continue
+            
+            if uni not in results:
+                results[uni] = {}
+            if lesson not in results[uni]:
+                results[uni][lesson] = []
+            results[uni][lesson].append(skill)
+        
+    except Error as e:
+        print("Error while connecting to MySQL", e)
+    finally:
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
+    
+    return results
 
 
 def extract_and_get_title(skill_url):
@@ -138,7 +132,7 @@ def extract_and_get_title(skill_url):
 
 
 def search_courses_by_skill(all_data, search_skill, skill_extractor, db_config, university_name, threshold=52, use_cache=True):
-    from database import is_database_connected  # Assuming this is defined elsewhere
+    from database import is_database_connected 
     if not search_skill:
         print_colored_text("No skill provided for search.", 31)
         return []
@@ -157,7 +151,7 @@ def search_courses_by_skill(all_data, search_skill, skill_extractor, db_config, 
 
             query = """
                 SELECT semester, lesson_name, skill_name 
-                FROM skills_table 
+                FROM skills 
                 WHERE LOWER(skill_name) LIKE %s
             """
             cursor.execute(query, (f"%{search_skill.lower()}%",))
@@ -258,5 +252,94 @@ def search_courses_by_skill(all_data, search_skill, skill_extractor, db_config, 
         print_horizontal_line(50)
         print_colored_text("No closely matching courses found.", 31)
         print_horizontal_line(50)
+
+    return found_courses
+
+
+
+
+def search_courses_by_skill_database(search_skill, db_config, university_name=None, threshold=52):
+    from collections import Counter
+    from database import is_database_connected
+    if not search_skill:
+        print("No skill provided for search.")
+        return {}
+
+    print("-" * 50)
+    print(f"Searching for universities offering courses related to skill: {search_skill}")
+    
+    found_courses = {}
+    skill_frequency = Counter()
+
+    if is_database_connected(db_config):
+        print("Database connected. Fetching skills from database...")
+
+        try:
+            conn = mysql.connector.connect(**db_config)
+            cursor = conn.cursor(dictionary=True)
+
+            query = """
+                SELECT u.university_name, l.semester, l.lesson_name, s.skill_name 
+                FROM Skills s
+                JOIN Lessons l ON s.lesson_id = l.lesson_id
+                JOIN University u ON l.university_id = u.university_id
+                WHERE LOWER(s.skill_name) LIKE %s
+            """
+
+            params = [f"%{search_skill.lower()}%"]
+            
+            cursor.execute(query, params)
+            results = cursor.fetchall()
+            cursor.close()
+            conn.close()
+
+            matched_universities = {}
+            if university_name:
+                for row in results:
+                    university = row["university_name"]
+                    similarity_score = fuzz.ratio(university_name.lower(), university.lower())
+                    if similarity_score >= threshold:
+                        matched_universities[university] = similarity_score
+                
+                if not matched_universities:
+                    print("No closely matching universities found.")
+                    return {}
+                
+                best_match = max(matched_universities, key=matched_universities.get)
+                results = [row for row in results if row["university_name"] == best_match]
+            
+            for row in results:
+                similarity_score = fuzz.ratio(search_skill.lower(), row["skill_name"].lower())
+                if similarity_score >= threshold:
+                    university = row["university_name"]
+                    semester = row["semester"]
+                    lesson = row["lesson_name"]
+                    skill = row["skill_name"]
+                    
+                    skill_frequency[skill] += 1
+                    
+                    if university not in found_courses:
+                        found_courses[university] = {}
+                    if semester not in found_courses[university]:
+                        found_courses[university][semester] = {}
+                    if lesson not in found_courses[university][semester]:
+                        found_courses[university][semester][lesson] = []
+                    
+                    found_courses[university][semester][lesson].append({"skill": skill, "score": similarity_score, "frequency": skill_frequency[skill]})
+
+        except mysql.connector.Error as e:
+            print(f"Database error: {e}")
+            return {}
+    else:
+        print("Database not connected. Unable to fetch results.")
+        return {}
+
+    if found_courses:
+        print(found_courses)
+        print("-" * 50)
+    else:
+        print("-" * 50)
+        print("No closely matching courses found.")
+        print("-" * 50)
 
     return found_courses
