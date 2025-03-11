@@ -42,44 +42,32 @@ def write_to_database(all_data, db_config, university_name, country, number_of_s
 
         print_colored_text("✅ Database connection established.", 33)
 
-        # Ensure the university exists or create it
         university_id = get_university_id(cursor, university_name, country, number_of_semesters)
 
-        # 🔥 Load cached data
         cached_data = load_from_cache(university_name) or {}
-
-        # 🔥 Ensure skills are accessed properly as a dictionary
         cached_skills = {}
         for semester, lessons in cached_data.items():
             if isinstance(lessons, dict):
                 for lesson, data in lessons.items():
                     if isinstance(data, dict) and "skill_names" in data and "skills" in data:
                         cached_skills[lesson] = {
-                            "skill_names": data["skill_names"],
-                            "skills": data["skills"]  # Skill URLs
+                            "skill_names": list(data["skill_names"]),
+                            "skills": list(data["skills"]),
+                            "skill_connect": data.get("skill_connect", {})  # Load existing skill_connect
                         }
 
-        updated_skills_cache = {}  # Store newly computed skills and URLs
+        updated_skills_cache = {}
 
-        # 🔥 Iterate over semesters before accessing lessons
         for semester_name, lessons in all_data.items():
             if not isinstance(lessons, dict):
-                print_colored_text(f"⚠️ Skipping invalid semester format: {semester_name}", 31)
                 continue
 
             for lesson_name, lesson_info in lessons.items():
                 if not isinstance(lesson_info, dict):
-                    print_colored_text(f"⚠️ Skipping invalid lesson format: {lesson_name}", 31)
                     continue
 
-                # Extract lesson description safely
                 lesson_desc = lesson_info.get("description", "")
 
-                print_horizontal_line(50)
-                print_colored_text(f"[📚 Inserting Lesson]: {lesson_name} ({semester_name})", 32)
-                print_horizontal_line(50)
-
-                # Insert lesson into database
                 cursor.execute(
                     "INSERT INTO Lessons (lesson_name, semester, description, university_id) VALUES (%s, %s, %s, %s)",
                     (lesson_name, semester_name, lesson_desc, university_id),
@@ -87,52 +75,53 @@ def write_to_database(all_data, db_config, university_name, country, number_of_s
 
                 lesson_id = cursor.lastrowid
 
-                # 🔥 Retrieve skills from cache if available
+                # Determine whether to use cached skills or extract new ones
                 if lesson_name in cached_skills:
                     extracted_skills = cached_skills[lesson_name]["skill_names"]
                     extracted_skill_urls = cached_skills[lesson_name]["skills"]
-                    print_colored_text(f"⚡ Using cached skills for: {lesson_name}", 36)
+                    skill_connect = cached_skills[lesson_name].get("skill_connect", {})
                 else:
-                    # Extract new skills from lesson description
                     skills_list = skill_extractor.get_skills([lesson_desc])
-                    extracted_skills = set()
-                    extracted_skill_urls = set()
+                    extracted_skills = []
+                    extracted_skill_urls = []
+                    skill_connect = {}
 
                     for skill_set in skills_list:
                         for skill_url in skill_set:
                             skill_name = extract_and_get_title(skill_url) or "Unknown Skill"
-                            extracted_skills.add(skill_name)
-                            extracted_skill_urls.add(skill_url)
+                            skill_connect[skill_url] = skill_name  # Maintain URL-Skill mapping
+                            
+                    extracted_skill_urls = list(skill_connect.keys())
+                    extracted_skills = list(skill_connect.values())
 
-                    # 🔥 Store newly extracted skills & URLs in cache
                     updated_skills_cache[lesson_name] = {
-                        "skill_names": list(extracted_skills),
-                        "skills": list(extracted_skill_urls)
+                        "skill_names": extracted_skills,
+                        "skills": extracted_skill_urls,
+                        "skill_connect": skill_connect  # Store mapping for cache update
                     }
 
-                # Insert skills into database
-                for skill_name, skill_url in zip(extracted_skills, extracted_skill_urls):
-                    print_colored_text(f"🛠 [Inserting Skill]: {skill_name} ➝ {skill_url}", 33)
+                # Insert skills into the database, ensuring skill_connect consistency
+                for skill_url, skill_name in skill_connect.items():
                     cursor.execute(
                         "INSERT INTO Skills (skill_name, skill_url, lesson_id) VALUES (%s, %s, %s)",
                         (skill_name, skill_url, lesson_id),
                     )
 
-        # 🔥 Update the university cache with new skills and URLs
+        # Update cache with the newly extracted skills and skill_connect
         for semester_name, lessons in all_data.items():
             if semester_name not in cached_data:
                 cached_data[semester_name] = {}
+
             for lesson_name, skill_data in updated_skills_cache.items():
                 if lesson_name in lessons:
                     cached_data[semester_name][lesson_name] = lessons[lesson_name]
                     cached_data[semester_name][lesson_name]["skill_names"] = skill_data["skill_names"]
                     cached_data[semester_name][lesson_name]["skills"] = skill_data["skills"]
+                    cached_data[semester_name][lesson_name]["skill_connect"] = skill_data["skill_connect"]  # Add mapping
 
         save_to_cache(university_name, cached_data)
 
-        # Commit transaction
         connection.commit()
-        print_loading_line(25)
         print_colored_text("✅ Data successfully written to the database!", 33)
 
     except mysql.connector.Error as err:

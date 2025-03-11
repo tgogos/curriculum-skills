@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException
 from pydantic import BaseModel
 from database import write_to_database, is_database_connected
-from skills import get_skills_for_lesson, search_courses_by_skill, search_courses_by_skill_database, extract_and_get_title
+from skills import get_skills_for_lesson, search_courses_by_skill, search_courses_by_skill_database, extract_and_get_title, search_courses_by_skill_url
 from pdf_utils import extract_text_from_pdf, split_by_semester, process_pages_by_lesson, extract_text_after_marker
 from config import DB_CONFIG
 import os
@@ -15,8 +15,10 @@ from esco_skill_extractor import SkillExtractor
 from typing import Dict, Optional
 import re
 from crawler import UniversityCrawler
+from collections import OrderedDict
 
 skill_extractor = SkillExtractor()
+
 
 app = FastAPI(title="SkillCrawl API", description="API for skill extraction and course search.")
 
@@ -28,6 +30,10 @@ class PDFProcessingRequest(BaseModel):
 
 class SkillSearchRequest(BaseModel):
     skill: str
+    university: str = None 
+
+class SkillSearchURLRequest(BaseModel):
+    skill_url: str
     university: str = None 
 
 class LessonRequest(BaseModel):
@@ -80,79 +86,55 @@ def list_pdfs():
 
 @app.post("/process_pdf")
 def process_pdf(request: PDFProcessingRequest):
+
+    university_cache = load_university_cache()
     print(f"Received request to process PDF: {request.pdf_name}")
     
     curriculum_folder = "curriculum"
-    if not os.path.exists(curriculum_folder):
-        os.makedirs(curriculum_folder)
-    
+    os.makedirs(curriculum_folder, exist_ok=True)
+
     matching_files = [f for f in os.listdir(curriculum_folder) if f.endswith(".pdf") and request.pdf_name in f]
-    
     if not matching_files:
-        raise HTTPException(
-            status_code=404, 
-            detail=f"No PDF matching '{request.pdf_name}' found in 'curriculum/'. Available PDFs: {os.listdir(curriculum_folder)}"
-        )
-    
+        raise HTTPException(404, f"No PDF matching '{request.pdf_name}' found in 'curriculum/'.")
+
     pdf_path = os.path.join(curriculum_folder, matching_files[0])
     pages = extract_text_from_pdf(pdf_path)
-    
-    university_name = find_possible_university(pdf_path) or ""
-    university_country = get_university_country(university_name) if university_name else "Unknown"
+
+    cached_data = load_from_cache(pdf_path) or {}
+    university_name = cached_data.get("university_name", "").strip()
+    university_country = cached_data.get("university_country", "").strip()
+
+    if not university_name or "unknown" in university_name.lower():
+        university_name = re.sub(r"[^a-zA-Z ]+", "", os.path.basename(pdf_path).replace(".pdf", "")).strip()
+        print(f"✅ Extracted university name: {university_name}")
 
     university_cache = load_university_cache()
-    
-
-    if university_name in university_cache:
-        university_country = university_cache[university_name].get("country", "Unknown")
-    else:
-        filename = os.path.basename(pdf_path).replace(".pdf", "")
-        
-
-        if not university_name or "Unknown University" in university_name or university_country == "Unknown":
-            university_name = re.sub(r"[^a-zA-Z0-9]+", " ", filename).strip()
-            print(f"Extracted university name from filename: {university_name}")
-        
+    if university_name not in university_cache:
         university_country = get_university_country(university_name) if university_name else "Unknown"
+        university_cache[university_name] = {"name": university_name, "country": university_country}
 
-
-        university_cache[university_name] = {
-            "name": university_name,
-            "country": university_country
-        }
-        save_cache()
-    
     marker = ['Course Outlines', 'Course Content']
     text_after_marker = extract_text_after_marker(pages, marker)
-    
     semesters = split_by_semester(text_after_marker)
     all_data = {}
-    
-    for i, semester_text in enumerate(semesters, 1):
-        lessons = process_pages_by_lesson([page for page in pages if page in semester_text])
-        lesson_count = len(lessons)
-        lesson_data = {}
-        
-        for lesson, description in lessons.items():
-            skills_list = skill_extractor.get_skills([description])
-            filtered_skills = {skill_url for skill_set in skills_list for skill_url in skill_set}
-            
-            lesson_data[lesson] = {
-                "description": description,
-                "skills": list(filtered_skills)
+
+    if semesters:
+        for i, semester_text in enumerate(semesters, 1):
+            lessons = process_pages_by_lesson([page for page in pages if page in semester_text])
+            all_data[f"Semester {i} ({len(lessons)} lessons)"] = {
+                lesson: {"description": desc, "skills": list({s for skill_set in skill_extractor.get_skills([desc]) for s in skill_set})}
+                for lesson, desc in lessons.items()
             }
-        
-        all_data[f"Semester {i} ({lesson_count} lessons)"] = lesson_data
-    
-    if university_name:
-        all_data["university_name"] = university_name
-        all_data["university_country"] = university_country
-    
-    if not isinstance(all_data, dict):
-        raise ValueError("Data to be cached must be a dictionary.")
-    
+    else:
+        lessons = process_pages_by_lesson(pages)
+        all_data["Lessons Only"] = {
+            lesson: {"description": desc, "skills": list({s for skill_set in skill_extractor.get_skills([desc]) for s in skill_set})}
+            for lesson, desc in lessons.items()
+        }
+
+    all_data.update({"university_name": university_name, "university_country": university_country})
     save_to_cache(university_name, all_data)
-    
+
     return {"message": "PDF processed successfully.", "data": all_data}
 
 
@@ -219,7 +201,6 @@ def calculate_skillnames(university_name: str, lesson_name: Optional[str] = None
     if not university_names:
         raise HTTPException(status_code=404, detail="No universities found in cache.")
 
-
     best_match, score = process.extractOne(university_name, university_names)
 
     if score < 70:  
@@ -253,8 +234,8 @@ def calculate_skillnames(university_name: str, lesson_name: Optional[str] = None
             print(f"[INFO] Processing skills for: {lesson} in {semester}")
 
             lesson_cache = cached_data.get(semester, {}).get(lesson, {})
-            cached_skill_names = set(lesson_cache.get("skill_names", []))
-            cached_skills = set(lesson_cache.get("skills", []))
+            cached_skill_names = lesson_cache.get("skill_names", [])
+            cached_skills = lesson_cache.get("skills", [])
 
             lesson_description = lesson_data.get("description", "")
 
@@ -266,33 +247,47 @@ def calculate_skillnames(university_name: str, lesson_name: Optional[str] = None
                 continue
 
             skills_list = skill_extractor.get_skills([lesson_description])
-            new_skills = set()
-            new_skill_names = set()
+            new_skills = []
+            new_skill_names = []
 
             for skill_set in skills_list:
-                for skill_url in skill_set:
-                    new_skills.add(skill_url)
+                skill_mapping = OrderedDict()  # Maintain insertion order for skill mapping
 
+                for skill_url in skill_set:
                     skill_name = extract_and_get_title(skill_url)
-                    if skill_name and skill_name not in cached_skill_names:
-                        cached_skill_names.add(skill_name)
-                        new_skill_names.add(skill_name)
+
+                    if skill_name:
+                        skill_mapping[skill_url] = skill_name  # URL as key, skill name as value
+
+                # Sort skill mapping by skill name to ensure consistent ordering
+                sorted_skill_mapping = OrderedDict(sorted(skill_mapping.items(), key=lambda x: x[1]))
+
+                for skill_url, skill_name in sorted_skill_mapping.items():
+                    if skill_name not in cached_skill_names:  
+                        cached_skill_names.append(skill_name)
+
+                    if skill_url not in cached_skills:  
+                        cached_skills.append(skill_url)
+
+                    # Add the new mapping to skill_connect
+                cached_data[semester][lesson].setdefault("skill_connect", {})
+                cached_data[semester][lesson]["skill_connect"].update(sorted_skill_mapping)
+
+                # Store ordered skills in the cache
+            cached_data[semester][lesson]["skills"] = cached_skills  # Ordered skill URLs
+            cached_data[semester][lesson]["skill_names"] = cached_skill_names  # Ordered skill names
+            save_to_cache(university_name, cached_data)
+
 
             if new_skill_names:
-                if semester not in cached_data:
-                    cached_data[semester] = {}
-                if lesson not in cached_data[semester]:
-                    cached_data[semester][lesson] = {}
-
-                cached_data[semester][lesson]["skill_names"] = list(cached_skill_names)
+                cached_data.setdefault(semester, {}).setdefault(lesson, {})["skill_names"] = cached_skill_names
                 save_to_cache(university_name, cached_data)
 
-            updated_skills = cached_skills | new_skills
-            if updated_skills != cached_skills:
-                cached_data[semester][lesson]["skills"] = list(updated_skills)
+            if cached_skills:
+                cached_data[semester][lesson]["skills"] = cached_skills
                 save_to_cache(university_name, cached_data)
 
-            extracted_skills[lesson] = list(cached_skill_names)
+            extracted_skills[lesson] = cached_skill_names
 
     return {"university_name": university_name, "skills": extracted_skills}
 
@@ -311,6 +306,23 @@ def search_skill(request: SkillSearchRequest):
     
     results = search_courses_by_skill_database(request.skill, DB_CONFIG, request.university)
     return {"results": results}
+
+
+@app.post("/search_skill_by_URL")
+def search_skill_url(request: SkillSearchURLRequest):
+    """
+    You can search if a skill exists in the database.
+    In return:
+    - University name(s) the skill is in
+    - Lesson(s) the skill is in
+    - And frequency of appearance
+    """
+    if not is_database_connected(DB_CONFIG):
+        raise HTTPException(status_code=500, detail="Database connection failed.")
+    
+    results = search_courses_by_skill_url(request.skill_url, DB_CONFIG, request.university)
+    return {"results": results}
+
 
 
 @app.get("/search_json_in_cache")

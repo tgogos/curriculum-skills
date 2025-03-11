@@ -44,11 +44,21 @@ else:
 
 import requests
 import json
-
 def get_university_country(university_name):
-    if university_name in university_cache and "country" in university_cache[university_name]:
+    # ✅ Ensure university_name is a string
+    if not isinstance(university_name, str):
+        print(f"⚠️ Invalid university_name type: {type(university_name)}. Expected str, got {university_name}")
+        return "Unknown"
+
+    # ✅ Ensure university_cache is a dictionary
+    if not isinstance(university_cache, dict):
+        print("⚠️ university_cache is not a dictionary!")
+        return "Unknown"
+
+    # ✅ Check if university exists in cache and has a country field
+    if university_name in university_cache and isinstance(university_cache[university_name], dict) and "country" in university_cache[university_name]:
         return university_cache[university_name]["country"]
-    
+
     try:
         response = requests.get(UNIVERSITY_API + university_name, timeout=5)  # Set a timeout
         response.raise_for_status()  # Ensure the request was successful
@@ -79,6 +89,7 @@ def get_university_country(university_name):
         print(f"❌ API Request failed: {e}")
 
     return "Unknown"
+
 
 
 def main(pdf_file_path: str, simplified: bool, skills: bool, show_descr: bool, skillname: bool, database: bool, skillsearch: bool, lesson_name: str = None):

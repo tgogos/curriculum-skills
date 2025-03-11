@@ -193,6 +193,12 @@ def process_pages_by_lesson(pages: list) -> dict:
                     potential_lesson_name = ""  # Prevent it from being stored
                     continue
 
+                if re.match(r'^[^A-Za-z]', potential_lesson_name):  
+                    print(f"[DEBUG] Skipping '{potential_lesson_name}' (starts with a symbol or number)")
+                    potential_lesson_name = ""  # Prevent it from being stored
+                    continue
+
+
                 capture_text = True
                 lesson_text = []
 
