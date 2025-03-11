@@ -19,6 +19,13 @@ from collections import OrderedDict
 
 skill_extractor = SkillExtractor()
 
+UNI_FILE = "university_cache.json"
+
+if os.path.exists(UNI_FILE):
+    with open(UNI_FILE, "r") as f:
+        university_cache = json.load(f)
+else:
+    university_cache = {}
 
 app = FastAPI(title="SkillCrawl API", description="API for skill extraction and course search.")
 
@@ -107,6 +114,7 @@ def process_pdf(request: PDFProcessingRequest):
     if not university_name or "unknown" in university_name.lower():
         university_name = re.sub(r"[^a-zA-Z ]+", "", os.path.basename(pdf_path).replace(".pdf", "")).strip()
         print(f"✅ Extracted university name: {university_name}")
+        save_cache()
 
     university_cache = load_university_cache()
     if university_name not in university_cache:
@@ -133,6 +141,7 @@ def process_pdf(request: PDFProcessingRequest):
         }
 
     all_data.update({"university_name": university_name, "university_country": university_country})
+    save_cache()
     save_to_cache(university_name, all_data)
 
     return {"message": "PDF processed successfully.", "data": all_data}
@@ -184,18 +193,7 @@ def get_skills(request: LessonRequest):
 
 @app.post("/calculate_skillnames")
 def calculate_skillnames(university_name: str, lesson_name: Optional[str] = None):
-    """
-    Calculate skill names for a specific university, using fuzzy matching for university & lesson names.
-    
-    Args:
-        university_name (str): The university to retrieve skills for.
-        lesson_name (Optional[str]): If provided, only extract skills for this lesson.
-
-    Returns:
-        dict: Extracted skill names for the university (or specific lesson).
-    """
-
-    all_cached_data = load_all_cached_data() 
+    all_cached_data = load_all_cached_data()
     university_names = [name.replace("_cache", "").strip() for name in all_cached_data.keys()]
 
     if not university_names:
@@ -203,32 +201,31 @@ def calculate_skillnames(university_name: str, lesson_name: Optional[str] = None
 
     best_match, score = process.extractOne(university_name, university_names)
 
-    if score < 70:  
+    if score < 70:
         raise HTTPException(status_code=404, detail=f"No close match found for university '{university_name}'.")
 
-    print(f"[INFO] Fuzzy matched university '{university_name}' -> '{best_match}' with score {score}")
+    print(f"[INFO] Matched university '{university_name}' -> '{best_match}' with score {score}")
 
-    university_name = next((key for key in all_cached_data.keys() if best_match in key), best_match)
-    cached_data = all_cached_data[university_name]
-
+    university_key = next((key for key in all_cached_data.keys() if best_match in key), best_match)
+    cached_data = all_cached_data[university_key]
     extracted_skills = {}
 
-    university_name = university_name.replace("_cache", "").strip()
+    university_name = university_key.replace("_cache", "").strip()
 
     for semester, lessons in cached_data.items():
-        if semester in ["university_name", "university_country"]:  
+        if semester in ["university_name", "university_country"]:
             continue  
 
         if lesson_name:
             lesson_names = list(lessons.keys())
             best_lesson_match, lesson_score = process.extractOne(lesson_name, lesson_names)
-            
-            if lesson_score < 85:
+
+            if lesson_score < 80:
                 raise HTTPException(status_code=404, detail=f"No close match found for lesson '{lesson_name}'.")
 
-            print(f"[INFO] Fuzzy matched lesson '{lesson_name}' -> '{best_lesson_match}' with score {lesson_score}")
-            lesson_name = best_lesson_match
-            lessons = {lesson_name: lessons[lesson_name]}
+            print(f"[INFO] Matched lesson '{lesson_name}' -> '{best_lesson_match}' with score {lesson_score}")
+
+            lessons = {best_lesson_match: lessons[best_lesson_match]}  # Keep only the matched lesson
 
         for lesson, lesson_data in lessons.items():
             print(f"[INFO] Processing skills for: {lesson} in {semester}")
@@ -238,59 +235,38 @@ def calculate_skillnames(university_name: str, lesson_name: Optional[str] = None
             cached_skills = lesson_cache.get("skills", [])
 
             lesson_description = lesson_data.get("description", "")
-
             if isinstance(lesson_description, dict):
                 lesson_description = lesson_description.get("text", "")
-
             if not isinstance(lesson_description, str):
                 print(f"[WARNING] Description for {lesson} is not a string. Skipping skill extraction.")
                 continue
 
             skills_list = skill_extractor.get_skills([lesson_description])
-            new_skills = []
-            new_skill_names = []
+            new_skills = OrderedDict()
 
             for skill_set in skills_list:
-                skill_mapping = OrderedDict()  # Maintain insertion order for skill mapping
-
                 for skill_url in skill_set:
                     skill_name = extract_and_get_title(skill_url)
-
                     if skill_name:
-                        skill_mapping[skill_url] = skill_name  # URL as key, skill name as value
+                        new_skills[skill_url] = skill_name  
 
-                # Sort skill mapping by skill name to ensure consistent ordering
-                sorted_skill_mapping = OrderedDict(sorted(skill_mapping.items(), key=lambda x: x[1]))
+            sorted_skills = OrderedDict(sorted(new_skills.items(), key=lambda x: x[1]))
 
-                for skill_url, skill_name in sorted_skill_mapping.items():
-                    if skill_name not in cached_skill_names:  
-                        cached_skill_names.append(skill_name)
+            for skill_url, skill_name in sorted_skills.items():
+                if skill_name not in cached_skill_names:
+                    cached_skill_names.append(skill_name)
+                if skill_url not in cached_skills:
+                    cached_skills.append(skill_url)
 
-                    if skill_url not in cached_skills:  
-                        cached_skills.append(skill_url)
-
-                    # Add the new mapping to skill_connect
-                cached_data[semester][lesson].setdefault("skill_connect", {})
-                cached_data[semester][lesson]["skill_connect"].update(sorted_skill_mapping)
-
-                # Store ordered skills in the cache
-            cached_data[semester][lesson]["skills"] = cached_skills  # Ordered skill URLs
-            cached_data[semester][lesson]["skill_names"] = cached_skill_names  # Ordered skill names
-            save_to_cache(university_name, cached_data)
-
-
-            if new_skill_names:
-                cached_data.setdefault(semester, {}).setdefault(lesson, {})["skill_names"] = cached_skill_names
-                save_to_cache(university_name, cached_data)
-
-            if cached_skills:
-                cached_data[semester][lesson]["skills"] = cached_skills
-                save_to_cache(university_name, cached_data)
+            cached_data[semester][lesson]["skill_connect"] = sorted_skills
+            cached_data[semester][lesson]["skills"] = cached_skills
+            cached_data[semester][lesson]["skill_names"] = cached_skill_names
 
             extracted_skills[lesson] = cached_skill_names
 
-    return {"university_name": university_name, "skills": extracted_skills}
+    save_to_cache(university_name, cached_data)  
 
+    return {"university_name": university_name, "skills": extracted_skills}
 
 @app.post("/search_skill")
 def search_skill(request: SkillSearchRequest):
@@ -408,6 +384,10 @@ def save_to_db(university_name: str):
     }
 
 CACHE_FOLDER = "cache"
+
+@app.get("/all_data")
+def get_all_data():
+    return
 
 @app.post("/save_all_to_db")
 def save_all_to_db():

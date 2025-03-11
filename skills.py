@@ -268,82 +268,83 @@ def search_courses_by_skill_database(search_skill, db_config, university_name=No
         return {}
 
     print("-" * 50)
-    print(f"Searching for universities offering courses related to skill: {search_skill}")
-    
+    print(f"Searching for courses related to skill: {search_skill}")
+
     found_courses = {}
     skill_frequency = Counter()
 
-    if is_database_connected(db_config):
-        print("Database connected. Fetching skills from database...")
-
-        try:
-            conn = mysql.connector.connect(**db_config)
-            cursor = conn.cursor(dictionary=True)
-
-            query = """
-                SELECT u.university_name, l.semester, l.lesson_name, s.skill_name 
-                FROM Skills s
-                JOIN Lessons l ON s.lesson_id = l.lesson_id
-                JOIN University u ON l.university_id = u.university_id
-                WHERE LOWER(s.skill_name) LIKE %s
-            """
-
-            params = [f"%{search_skill.lower()}%"]
-            
-            cursor.execute(query, params)
-            results = cursor.fetchall()
-            cursor.close()
-            conn.close()
-
-            matched_universities = {}
-            if university_name:
-                for row in results:
-                    university = row["university_name"]
-                    similarity_score = fuzz.ratio(university_name.lower(), university.lower())
-                    if similarity_score >= threshold:
-                        matched_universities[university] = similarity_score
-                
-                if not matched_universities:
-                    print("No closely matching universities found.")
-                    return {}
-                
-                best_match = max(matched_universities, key=matched_universities.get)
-                results = [row for row in results if row["university_name"] == best_match]
-            
-            for row in results:
-                similarity_score = fuzz.ratio(search_skill.lower(), row["skill_name"].lower())
-                if similarity_score >= threshold:
-                    university = row["university_name"]
-                    semester = row["semester"]
-                    lesson = row["lesson_name"]
-                    skill = row["skill_name"]
-                    
-                    skill_frequency[skill] += 1
-                    
-                    if university not in found_courses:
-                        found_courses[university] = {}
-                    if semester not in found_courses[university]:
-                        found_courses[university][semester] = {}
-                    if lesson not in found_courses[university][semester]:
-                        found_courses[university][semester][lesson] = []
-                    
-                    found_courses[university][semester][lesson].append({"skill": skill, "score": similarity_score, "frequency": skill_frequency[skill]})
-
-        except mysql.connector.Error as e:
-            print(f"Database error: {e}")
-            return {}
-    else:
+    if not is_database_connected(db_config):
         print("Database not connected. Unable to fetch results.")
         return {}
 
+    print("Database connected. Fetching skills from database...")
+
+    try:
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor(dictionary=True)
+
+        query = """
+            SELECT u.university_name, l.semester, l.lesson_name, s.skill_name 
+            FROM Skills s
+            JOIN Lessons l ON s.lesson_id = l.lesson_id
+            JOIN University u ON l.university_id = u.university_id
+            WHERE LOWER(s.skill_name) LIKE %s
+        """
+
+        cursor.execute(query, [f"%{search_skill.lower()}%"])
+        results = cursor.fetchall()
+
+    except mysql.connector.Error as e:
+        print(f"Database error: {e}")
+        return {}
+
+    finally:
+        cursor.close()
+        conn.close()
+
+    if university_name:
+        matched_universities = {
+            row["university_name"]: fuzz.ratio(university_name.lower(), row["university_name"].lower())
+            for row in results
+        }
+        matched_universities = {k: v for k, v in matched_universities.items() if v >= threshold}
+
+        if not matched_universities:
+            print("No closely matching universities found.")
+            return {}
+
+        best_match = max(matched_universities, key=matched_universities.get)
+        results = [row for row in results if row["university_name"] == best_match]
+
+    # ✅ If no university_name, return ALL lessons that match the skill
+    for row in results:
+        university = row["university_name"]
+        semester = row["semester"]
+        lesson = row["lesson_name"]
+        skill = row["skill_name"]
+
+        if fuzz.ratio(search_skill.lower(), skill.lower()) >= threshold:
+            skill_frequency[skill] += 1
+
+            if university not in found_courses:
+                found_courses[university] = {}
+            if semester not in found_courses[university]:
+                found_courses[university][semester] = {}
+            if lesson not in found_courses[university][semester]:
+                found_courses[university][semester][lesson] = []
+
+            found_courses[university][semester][lesson].append({
+                "skill": skill,
+                "score": fuzz.ratio(search_skill.lower(), skill.lower()),
+                "frequency": skill_frequency[skill]
+            })
+
     if found_courses:
         print(found_courses)
-        print("-" * 50)
     else:
-        print("-" * 50)
         print("No closely matching courses found.")
-        print("-" * 50)
 
+    print("-" * 50)
     return found_courses
 
 
