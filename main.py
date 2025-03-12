@@ -16,6 +16,13 @@ from typing import Dict, Optional
 import re
 from crawler import UniversityCrawler
 from collections import OrderedDict
+import psycopg2
+import mysql.connector
+from concurrent.futures import ThreadPoolExecutor
+
+
+import requests
+
 
 skill_extractor = SkillExtractor()
 
@@ -70,11 +77,10 @@ def list_pdfs():
 
             if not university_name or "unknown" in university_name.lower():
                 filename = f.replace(".pdf", "")
-                university_name = re.sub(r"[^a-zA-Z0-9]+", " ", filename).strip()
+                university_name = re.sub(r"[_\W]+", " ", filename).strip()
                 print(f"Extracted university name from filename in /list_pdfs: {university_name}") 
 
-            if not university_country or university_country.lower() == "unknown":
-                university_country = get_university_country(university_name) if university_name else "Unknown"
+            university_country = get_university_country(university_name) if university_name else "Unknown"
 
             pdf_files.append({
                 "filename": f,
@@ -112,14 +118,17 @@ def process_pdf(request: PDFProcessingRequest):
     university_country = cached_data.get("university_country", "").strip()
 
     if not university_name or "unknown" in university_name.lower():
-        university_name = re.sub(r"[^a-zA-Z ]+", "", os.path.basename(pdf_path).replace(".pdf", "")).strip()
+        university_name = re.sub(r"[_\W]+", " ", os.path.basename(pdf_path).replace(".pdf", "")).strip()
         print(f"✅ Extracted university name: {university_name}")
         save_cache()
 
+
     university_cache = load_university_cache()
-    if university_name not in university_cache:
+    if university_name not in university_cache or university_country not in university_cache:
         university_country = get_university_country(university_name) if university_name else "Unknown"
         university_cache[university_name] = {"name": university_name, "country": university_country}
+
+
 
     marker = ['Course Outlines', 'Course Content']
     text_after_marker = extract_text_after_marker(pages, marker)
@@ -139,6 +148,8 @@ def process_pdf(request: PDFProcessingRequest):
             lesson: {"description": desc, "skills": list({s for skill_set in skill_extractor.get_skills([desc]) for s in skill_set})}
             for lesson, desc in lessons.items()
         }
+
+    university_country = get_university_country(university_name) if university_name else "Unknown"
 
     all_data.update({"university_name": university_name, "university_country": university_country})
     save_cache()
@@ -191,6 +202,8 @@ def get_skills(request: LessonRequest):
 
     return {"Data": skills or []} 
 
+
+
 @app.post("/calculate_skillnames")
 def calculate_skillnames(university_name: str, lesson_name: Optional[str] = None):
     all_cached_data = load_all_cached_data()
@@ -212,22 +225,13 @@ def calculate_skillnames(university_name: str, lesson_name: Optional[str] = None
 
     university_name = university_key.replace("_cache", "").strip()
 
-    for semester, lessons in cached_data.items():
-        if semester in ["university_name", "university_country"]:
-            continue  
+    # Skillab Tracker API endpoint
+    skillab_tracker_url = "https://skillab-tracker.csd.auth.gr/api/track_skills"
 
-        if lesson_name:
-            lesson_names = list(lessons.keys())
-            best_lesson_match, lesson_score = process.extractOne(lesson_name, lesson_names)
 
-            if lesson_score < 80:
-                raise HTTPException(status_code=404, detail=f"No close match found for lesson '{lesson_name}'.")
-
-            print(f"[INFO] Matched lesson '{lesson_name}' -> '{best_lesson_match}' with score {lesson_score}")
-
-            lessons = {best_lesson_match: lessons[best_lesson_match]}  # Keep only the matched lesson
-
-        for lesson, lesson_data in lessons.items():
+    def process_lesson(semester, lesson, lesson_data):
+        """ Extracts skills for a lesson using Skillab Tracker API """
+        try:
             print(f"[INFO] Processing skills for: {lesson} in {semester}")
 
             lesson_cache = cached_data.get(semester, {}).get(lesson, {})
@@ -237,18 +241,46 @@ def calculate_skillnames(university_name: str, lesson_name: Optional[str] = None
             lesson_description = lesson_data.get("description", "")
             if isinstance(lesson_description, dict):
                 lesson_description = lesson_description.get("text", "")
-            if not isinstance(lesson_description, str):
-                print(f"[WARNING] Description for {lesson} is not a string. Skipping skill extraction.")
-                continue
+            if not isinstance(lesson_description, str) or not lesson_description.strip():
+                print(f"[WARNING] No valid description for {lesson}. Skipping skill extraction.")
+                return lesson, cached_skill_names
 
+            # 🔵 Extract skills using skill extractor
             skills_list = skill_extractor.get_skills([lesson_description])
-            new_skills = OrderedDict()
+            skill_urls = set()
 
             for skill_set in skills_list:
                 for skill_url in skill_set:
-                    skill_name = extract_and_get_title(skill_url)
-                    if skill_name:
-                        new_skills[skill_url] = skill_name  
+                    skill_urls.add(skill_url)
+
+            if not skill_urls:
+                print(f"[WARNING] No skills found for {lesson}. Skipping API call.")
+                return lesson, cached_skill_names
+
+            # 🔵 Convert skill URLs into URL-encoded format for API call
+            skill_params = "&".join([f"ids={requests.utils.quote(skill_url)}" for skill_url in skill_urls])
+
+            # 🔵 Make the POST request in the required format
+            skillab_tracker_url = "https://skillab-tracker.csd.auth.gr/api/skills?page=1"
+            headers = {
+                "accept": "application/json",
+                "Content-Type": "application/x-www-form-urlencoded"
+            }
+            response = requests.post(skillab_tracker_url, headers=headers, data=skill_params, verify=False)
+
+            if response.status_code != 200:
+                print(f"[ERROR] Skillab API failed for {lesson}. Response: {response.status_code} - {response.text}")
+                return lesson, cached_skill_names
+
+            # 🔵 Extract skill names from API response
+            skill_data = response.json()
+            new_skills = OrderedDict()
+
+            for skill in skill_data.get("items", []):
+                skill_url = skill.get("id")
+                skill_name = skill.get("label") or (skill.get("alternative_labels")[0] if skill.get("alternative_labels") else "Unknown Skill")
+
+                new_skills[skill_url] = skill_name
 
             sorted_skills = OrderedDict(sorted(new_skills.items(), key=lambda x: x[1]))
 
@@ -262,11 +294,45 @@ def calculate_skillnames(university_name: str, lesson_name: Optional[str] = None
             cached_data[semester][lesson]["skills"] = cached_skills
             cached_data[semester][lesson]["skill_names"] = cached_skill_names
 
-            extracted_skills[lesson] = cached_skill_names
+            print(f"[INFO] Successfully extracted {len(sorted_skills)} skills for {lesson}")
+            return lesson, cached_skill_names
 
-    save_to_cache(university_name, cached_data)  
+        except Exception as e:
+            print(f"[ERROR] Failed to process lesson '{lesson}' in '{semester}': {e}")
+            return lesson, []
+
+
+    lesson_tasks = []
+
+    with ThreadPoolExecutor() as executor:
+        for semester, lessons in cached_data.items():
+            if semester in ["university_name", "university_country"]:
+                continue
+
+            if lesson_name:
+                best_lesson_match, lesson_score = process.extractOne(lesson_name, list(lessons.keys()))
+
+                if lesson_score < 80:
+                    raise HTTPException(status_code=404, detail=f"No close match found for lesson '{lesson_name}'.")
+
+                print(f"[INFO] Matched lesson '{lesson_name}' -> '{best_lesson_match}' with score {lesson_score}")
+
+                selected_lessons = {best_lesson_match: lessons[best_lesson_match]}
+            else:
+                selected_lessons = lessons  # Preserve all lessons if no specific one is given
+
+            for lesson, lesson_data in selected_lessons.items():
+                lesson_tasks.append(executor.submit(process_lesson, semester, lesson, lesson_data))
+
+    for future in lesson_tasks:
+        lesson, skills = future.result()
+        extracted_skills[lesson] = skills
+
+    save_to_cache(university_name, cached_data)
 
     return {"university_name": university_name, "skills": extracted_skills}
+
+
 
 @app.post("/search_skill")
 def search_skill(request: SkillSearchRequest):
@@ -385,9 +451,78 @@ def save_to_db(university_name: str):
 
 CACHE_FOLDER = "cache"
 
-@app.get("/all_data")
-def get_all_data():
-    return
+@app.get("/all_university_data")
+def get_all_data(university_name: str):
+    """
+    Fetch all university-related data, including lessons and skills, from the MySQL database.
+    If the database is offline, raise an error immediately.
+    """
+    if not is_database_connected(DB_CONFIG):  # Check connection before proceeding
+        raise HTTPException(status_code=500, detail="Database connection failed.")
+
+    query = """
+    SELECT 
+        u.university_name,
+        u.country,
+        u.number_of_semesters,
+        l.lesson_name,
+        l.semester,
+        l.description,
+        s.skill_name,
+        s.skill_url
+    FROM University u
+    LEFT JOIN Lessons l ON u.university_id = l.university_id
+    LEFT JOIN Skills s ON l.lesson_id = s.lesson_id
+    WHERE u.university_name LIKE %s
+    """
+
+    conn = mysql.connector.connect(**DB_CONFIG)
+    cursor = conn.cursor(dictionary=True)  
+
+    try:
+        cursor.execute(query, (f"%{university_name}%",))
+        results = cursor.fetchall()
+
+        if not results:
+            raise HTTPException(status_code=404, detail=f"No data found for university: {university_name}")
+
+        university_data = {
+            "university_name": results[0]["university_name"],
+            "country": results[0]["country"],
+            "number_of_semesters": results[0]["number_of_semesters"],
+            "semesters": {}
+        }
+
+        for row in results:
+            semester = row["semester"]
+            lesson_name = row["lesson_name"]
+            description = row["description"]
+            skill_name = row["skill_name"]
+            skill_url = row["skill_url"]
+
+            if semester:
+                if semester not in university_data["semesters"]:
+                    university_data["semesters"][semester] = {}
+
+                if lesson_name:
+                    if lesson_name not in university_data["semesters"][semester]:
+                        university_data["semesters"][semester][lesson_name] = {
+                            "description": description,
+                            "skills": []
+                        }
+
+                    if skill_name:
+                        university_data["semesters"][semester][lesson_name]["skills"].append(
+                            {"name": skill_name, "url": skill_url}
+                        )
+
+        return university_data
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
 
 @app.post("/save_all_to_db")
 def save_all_to_db():

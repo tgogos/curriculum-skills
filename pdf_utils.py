@@ -11,6 +11,8 @@ from output import print_colored_text, print_green_line
 import nltk
 from nltk.corpus import words
 
+from concurrent.futures import ThreadPoolExecutor
+
 try:
     nltk.data.find('corpora/words.zip')
 except LookupError:
@@ -39,31 +41,36 @@ def download_pdf(url: str, save_path: str) -> str:
         file.write(response.content)
     return save_path
 
+
 def extract_text_from_pdf(pdf_file_path: str) -> list:
     cache_key = f"text_{pdf_file_path}"
     if is_cached(cache_key):
         print(f"[CACHE] Loading text from cache for {pdf_file_path}")
         print_loading_line(25)
         return load_cache()[cache_key]
-    
+
     print(f"[INFO] Extracting text from PDF: {pdf_file_path}")
     print_loading_line(25)
     page_texts = []
-    
-    with pdfplumber.open(pdf_file_path) as pdf:
-        for i, page in enumerate(pdf.pages):
-            text = page.extract_text(x_tolerance=2, y_tolerance=2) or ''
-            print(f"[DEBUG] Extracted {len(text)} chars from page {i + 1}")
-            if len(text) < 50:
-                print(f"[WARNING] Page {i + 1} might be empty or improperly read!")
 
-            page_texts.append(text)
+    with pdfplumber.open(pdf_file_path) as pdf:
+        def extract_page_text(page, page_num):
+            text = page.extract_text(x_tolerance=2, y_tolerance=2) or ''
+            print(f"[DEBUG] Extracted {len(text)} chars from page {page_num + 1}")
+            if len(text) < 50:
+                print(f"[WARNING] Page {page_num + 1} might be empty or improperly read!")
+            return text
+
+        with ThreadPoolExecutor() as executor:
+            results = executor.map(extract_page_text, pdf.pages, range(len(pdf.pages)))
+
+        page_texts = list(results)
 
     cache = load_cache()
     cache[cache_key] = page_texts
     from skills import save_cache
     save_cache(cache)
-    
+
     print(f"[INFO] Successfully extracted text from {len(page_texts)} pages.")
     return page_texts
 
@@ -152,16 +159,20 @@ def extract_description(text: str) -> str:
     description = re.sub(r'(?i)course content', '', description).strip()
     return description if description else "This lesson has no data!"
 
+from concurrent.futures import ThreadPoolExecutor
+
 def process_pages_by_lesson(pages: list) -> dict:
     print("[INFO] Processing pages to extract lessons...")
     lesson_dict = {}
 
-    for page_num, page in enumerate(pages):
+    def process_page(page_data):
+        page_num, page = page_data
         print(f"[DEBUG] Processing page {page_num + 1}...")
+
         lines = page.split('\n')
         if not lines:
             print(f"[WARNING] Page {page_num + 1} is empty, skipping...")
-            continue
+            return None
 
         potential_lesson_name = ""
         lesson_text = []
@@ -170,33 +181,23 @@ def process_pages_by_lesson(pages: list) -> dict:
         for line in lines:
             line = line.strip()
 
-            # Detect course titles (usually all-uppercase)
             if line.isupper() and len(line.split()) > 0:
                 potential_lesson_name = clean_lesson_name(line).strip()
                 print(f"[DEBUG] Detected lesson title: {potential_lesson_name}")
                 print(f"[DEBUG] Checking lesson name (raw): '{repr(potential_lesson_name)}'")
 
-                # 🚨 Filter invalid lesson names IMMEDIATELY
                 if re.search(r'[*_=!?]', potential_lesson_name):
                     print(f"[DEBUG] Skipping '{potential_lesson_name}' (contains special characters)")
-                    potential_lesson_name = ""  # Prevent it from being stored
-                    continue
-
+                    return None
                 if re.match(r'^[a-zA-Z]+\d+$', potential_lesson_name):
                     print(f"[DEBUG] Skipping '{potential_lesson_name}' (matches letter-number pattern)")
-                    potential_lesson_name = ""  # Prevent it from being stored
-                    continue
-
+                    return None
                 if len(potential_lesson_name) <= 3:
                     print(f"[DEBUG] Skipping '{potential_lesson_name}' (too short)")
-                    potential_lesson_name = ""  # Prevent it from being stored
-                    continue
-
-                if re.match(r'^[^A-Za-z]', potential_lesson_name):  
+                    return None
+                if re.match(r'^[^A-Za-z]', potential_lesson_name):
                     print(f"[DEBUG] Skipping '{potential_lesson_name}' (starts with a symbol or number)")
-                    potential_lesson_name = ""  # Prevent it from being stored
-                    continue
-
+                    return None
 
                 capture_text = True
                 lesson_text = []
@@ -204,10 +205,16 @@ def process_pages_by_lesson(pages: list) -> dict:
             elif capture_text:
                 lesson_text.append(line)
 
-        # 🚨 Ensure only valid lessons get stored
-        if potential_lesson_name and potential_lesson_name not in lesson_dict:
-            print(f"[INFO] Finalized lesson: {potential_lesson_name}")
-            lesson_dict[potential_lesson_name] = '\n'.join(lesson_text).strip()
+        if potential_lesson_name:
+            return potential_lesson_name, '\n'.join(lesson_text).strip()
+        return None
+
+    with ThreadPoolExecutor() as executor:
+        results = executor.map(process_page, enumerate(pages))
+
+    for result in results:
+        if result:
+            lesson_dict[result[0]] = result[1]
 
     print(f"[INFO] Extracted {len(lesson_dict)} lessons")
     return lesson_dict
