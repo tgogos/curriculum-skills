@@ -17,6 +17,8 @@ services:
       - DB_NAME=${MYSQL_DATABASE}
     depends_on:
       - db
+    labels:
+       io.portainer.accesscontrol.teams: skillab-all
     restart: unless-stopped
 
   db:
