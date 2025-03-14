@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  fastapi-service:
+    container_name: ${APP_NAME}
+    image: ${DOCKER_REG}${DOCKER_REPO}${APP_NAME}:${DOCKER_TAG}
+    build: .
+    ports:
+      - "5002:8000"
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DB_HOST=db
+      - DB_USER=${MYSQL_USER}
+      - DB_PASSWORD=${MYSQL_PASSWORD}
+      - DB_NAME=${MYSQL_DATABASE}
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  db:
+    container_name: curriculum-mysql-db
+    image: mysql:8.0
+    restart: unless-stopped
+    ports:
+      - "5003:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+    volumes:
+      - ./mysql_config/my.cnf:/etc/mysql/my.cnf
+      - mysql_data:/var/lib/mysql
+      - ./skillcrawl.sql:/docker-entrypoint-initdb.d/skillcrawl.sql
+
+volumes:
+  mysql_data:
