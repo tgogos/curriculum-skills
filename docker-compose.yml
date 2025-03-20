@@ -36,6 +36,10 @@ services:
       - ./mysql_config/my.cnf:/etc/mysql/my.cnf
       - mysql_data:/var/lib/mysql
       - ./skillcrawl.sql:/docker-entrypoint-initdb.d/skillcrawl.sql
+    labels:
+       io.portainer.accesscontrol.teams: skillab-all
 
 volumes:
   mysql_data:
+    labels:
+      io.portainer.accesscontrol.teams: skillab-all
