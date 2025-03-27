@@ -137,6 +137,60 @@ You can delete these files to force re-processing.
 
 -----
 
-![skillab](https://th.bing.com/th/id/OIP.XWHdKPsdkbsZ4HvK6B5jWwHaCH?rs=1&pid=ImgDetMain) 
+## 🔍 Key Method Explanations
+
+Here are the most important methods across the codebase explained for better understanding and easier contribution:
+
+---
+
+### `main.py` (FastAPI)
+
+- **`/process_pdf`**: Endpoint to process a PDF, extract text, split lessons, run skill extraction, and cache results.
+- **`/search_skill`**: Search database for lessons teaching a given skill.
+- **`/calculate_skillnames`**: Enriches lessons with missing skill names via Skillab Tracker API.
+- **`/get_top_skills` & `/get_top_skills_all`**: Return most frequently taught skills globally or per university.
+- **`/filter_skillnames`**: Lookup skill names for a specific university and lesson using either DB or cache.
+
+---
+
+### `skillcrawl.py`
+
+- **`main(...)`**: The main method that runs the terminal interface. Handles PDF processing, caching, and triggering the desired output based on command-line args.
+- **`get_university_country(university_name)`**: Uses an external API to detect a university's country from its name. Updates local cache.
+
+---
+
+### `pdf_utils.py`
+
+- **`extract_text_from_pdf(pdf_file_path)`**: Uses `PyMuPDF` to extract text from each page of the PDF. Also caches results.
+- **`extract_text_after_marker(text, markers)`**: Takes all text and returns everything after specific marker words like "Course Content".
+- **`split_by_semester(text)`**: Breaks the PDF text into sections by semester or year using regex.
+- **`process_pages_by_lesson(pages)`**: Processes PDF page-by-page to detect lessons and their descriptions using uppercase pattern recognition.
+
+---
+
+### `skills.py`
+
+- **`get_skills_for_lesson(...)`**: Looks up all skills associated with a given lesson or university. Optionally searches by lesson name.
+- **`extract_and_get_title(skill_url)`**: Fetches the readable name of a skill from its ESCO URL using their API.
+- **`search_courses_by_skill_database(...)`**: Searches all courses for a fuzzy match of the given skill name in the database.
+
+---
+
+### `database.py`
+
+- **`write_to_database(...)`**: Saves extracted data to MySQL: university, semesters, lessons, and skills. Also merges new skills with what's already in the cache.
+
+---
+
+### `helpers.py`
+
+- **`find_possible_university(pdf_file_path)`**: Scans PDF content using regex to guess the university name.
+- **`load_from_cache(university_name)` / `save_to_cache(...)`**: Manages university-specific cache JSONs.
+- **`contains_greek_characters(...)` / `contains_no_lowercase_letters(...)`**: Utilities used in filtering invalid lesson names.
+- **`extract_description(text)`**: Strips out and formats a clean description from lesson blocks.
+
+----
+![skillab](https://th.bing.com/th/id/OIP.XWHdKPsdkbsZ4HvK6B5jWwHaCH?rs=1&pid=ImgDetMain)
 
 
