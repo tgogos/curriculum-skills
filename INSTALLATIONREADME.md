@@ -88,7 +88,7 @@ Key endpoints:
 - `/process_pdf`: Upload and process a PDF
 - `/search_skill`: Search for courses that teach a skill
 - `/filter_skillnames`: Get skill names for a lesson
-- `/calculate_skillnames`: Enrich skills using external API
+- `/calculate_skillnames`: Enrich or calculate from scratch the corresponding skill names to the URLs.
 - `/get_top_skills`: Get top N skills per university
 - `/get_top_skills_all`: Get top skills across all universities
 - `/get_universities_by_skills`: Returns university names and their corresponding courses, for universities that contain every skill in the provided list.
