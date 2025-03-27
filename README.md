@@ -12,6 +12,9 @@ You can run it interactively in your terminal, use its web API with Swagger UI, 
 
 SkillCrawl is like a skill-focused academic detective. Here's how it works:
 
+<img align="right" src="https://easychair.org/images/cfp-logo/ucaat2025.jpg?id=17241655" alt="UCAAT" width="69"/>
+<img align="right" src="https://th.bing.com/th/id/OIP.XWHdKPsdkbsZ4HvK6B5jWwHaCH?rs=1&pid=ImgDetMain" alt="Skillab" width="200"/>
+
 - 📥 Takes in PDF files of university curricula.
 - 🔍 Reads and processes the text using PDF-aware techniques.
 - 🗂️ Splits course content into **semesters** and **individual lessons**, even if the formatting is inconsistent.
@@ -23,7 +26,6 @@ SkillCrawl is like a skill-focused academic detective. Here's how it works:
 - 🌐 (Experimental) A **crawler module** is being built to auto-visit university websites and scrape curriculum content without any manual download.
 
 ---
-
 ## 🛠️ Usage
 
 ### ➤ FastAPI Mode (Swagger UI)
