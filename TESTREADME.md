@@ -185,14 +185,25 @@ pip install -r requirements.txt
 Run all tests:
 
 ```bash
-pytest tests/
+python pytest -m tests/
 ```
+> Hint: Running this will return you a percentage of successful match.
 
 Run a specific test:
 
 ```bash
-pytest tests/test_compare_extracted_skills.py
+python pytest -m tests/test_compare_extracted_skills.py
 ```
+> Tip: Make sure you are in the curriculum-skills folder!
+> Hint: Running this will return you a percentage of successful match.
+
+Run tests, but informative ones, to see exactly what the test returned:
+
+```bash
+python -m pytest -s tests/test_compare_extracted_skills.py
+```
+>Tip: You add the -s to make sure you also get information about what was checked!
+>It is solely for testing purposes. It is more informative than just a percentage!
 
 ---
 

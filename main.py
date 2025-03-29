@@ -112,14 +112,16 @@ def process_pdf(request: PDFProcessingRequest):
     university_cache = load_university_cache()
     print(f"Received request to process PDF: {request.pdf_name}")
     
-    curriculum_folder = "curriculum"
-    os.makedirs(curriculum_folder, exist_ok=True)
+    if os.path.isabs(request.pdf_name) and os.path.exists(request.pdf_name):
+        pdf_path = request.pdf_name
+    else:
+        curriculum_folder = "curriculum"
+        os.makedirs(curriculum_folder, exist_ok=True)
+        matching_files = [f for f in os.listdir(curriculum_folder) if f.endswith(".pdf") and request.pdf_name in f]
+        if not matching_files:
+            print(f"No PDF matching '{request.pdf_name}' found in 'curriculum/'. Possibly running a test case?")
+        pdf_path = os.path.join(curriculum_folder, matching_files[0])
 
-    matching_files = [f for f in os.listdir(curriculum_folder) if f.endswith(".pdf") and request.pdf_name in f]
-    if not matching_files:
-        raise HTTPException(404, f"No PDF matching '{request.pdf_name}' found in 'curriculum/'.")
-
-    pdf_path = os.path.join(curriculum_folder, matching_files[0])
     pages = extract_text_from_pdf(pdf_path)
 
     cached_data = load_from_cache(pdf_path) or {}
@@ -165,7 +167,6 @@ def process_pdf(request: PDFProcessingRequest):
     save_to_cache(university_name, all_data)
 
     return {"message": "PDF processed successfully.", "data": all_data}
-
 
 CACHE_DIR = "cache"  
 
