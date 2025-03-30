@@ -437,12 +437,16 @@ def get_top_skills(request: TopSkillsRequest):
         raise HTTPException(status_code=500, detail="Database connection failed.")
     
     query = """
-        SELECT s.skill_name 
-        FROM Skills s
-        JOIN Lessons l ON s.lesson_id = l.lesson_id
-        JOIN University u ON l.university_id = u.university_id
-        WHERE u.university_name = %s
+    SELECT s.skill_name
+    FROM Skills s
+    JOIN Lessons l ON s.lesson_id = l.lesson_id
+    JOIN University u ON l.university_id = u.university_id
+    WHERE u.university_name = %s
+      AND s.skill_name IS NOT NULL
+      AND s.skill_name != ''
+      AND s.skill_name NOT LIKE 'Unknown%'
     """
+
     
     try:
         conn = mysql.connector.connect(**DB_CONFIG)

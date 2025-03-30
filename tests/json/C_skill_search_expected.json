@@ -13,14 +13,14 @@
     },
     "Delft University of Technology": {
       "Semester 1 (6 lessons)": {
-        "THE BUILDING BLOCKS OF A QUANTUM COMPUTER: PART 2": [
+        "THE BUILDING BLOCKS OF A QUANTUM COMPUTER: PART 1": [
           {
             "skill": "C++",
             "score": 100,
             "frequency": 2
           }
         ],
-        "THE BUILDING BLOCKS OF A QUANTUM COMPUTER: PART 1": [
+        "THE BUILDING BLOCKS OF A QUANTUM COMPUTER: PART 2": [
           {
             "skill": "C++",
             "score": 100,
@@ -56,14 +56,14 @@
             "frequency": 6
           }
         ],
-        "PARALLELISM AND CONCURRENCY IN SOFTWARE": [
+        "COMPUTER LANGUAGE PROCESSING": [
           {
             "skill": "C++",
             "score": 100,
             "frequency": 7
           }
         ],
-        "COMPUTER LANGUAGE PROCESSING": [
+        "PARALLELISM AND CONCURRENCY IN SOFTWARE": [
           {
             "skill": "C++",
             "score": 100,
@@ -120,7 +120,7 @@
           }
         ]
       },
-      "Semester 3 (42 lessons)": {
+      "Semester 3 (41 lessons)": {
         "ADVANCED COMPUTER ARCHITECTURE": [
           {
             "skill": "C++",
@@ -192,14 +192,14 @@
             "frequency": 22
           }
         ],
-        "ADVANCED CONCEPTS OF PROGRAMMING LANGUAGES": [
+        "COMPILER CONSTRUCTION I": [
           {
             "skill": "C++",
             "score": 100,
             "frequency": 23
           }
         ],
-        "COMPILER CONSTRUCTION I": [
+        "ADVANCED CONCEPTS OF PROGRAMMING LANGUAGES": [
           {
             "skill": "C++",
             "score": 100,
@@ -232,7 +232,7 @@
           }
         ]
       },
-      "Semester 4 (15 lessons)": {
+      "Semester 4 (14 lessons)": {
         "COMPUTER SYSTEMS": [
           {
             "skill": "C++",
@@ -270,7 +270,7 @@
           }
         ]
       },
-      "Semester 3 (10 lessons)": {
+      "Semester 3 (11 lessons)": {
         "ECAD AND ARCHITECTURE PRACTICAL CLASSES": [
           {
             "skill": "C++",
@@ -311,7 +311,7 @@
           }
         ]
       },
-      "Semester 7 (20 lessons)": {
+      "Semester 7 (21 lessons)": {
         "UNDERSTANDING QUANTUM ARCHITECTURE": [
           {
             "skill": "C++",
@@ -345,7 +345,7 @@
       }
     },
     "University of Groningen": {
-      "Semester 3 (19 lessons)": {
+      "Semester 3 (20 lessons)": {
         "COMPILER CONSTRUCTION": [
           {
             "skill": "C++",
@@ -378,14 +378,14 @@
             "frequency": 44
           }
         ],
-        "INTELLIGENT SYSTEMS 1": [
+        "PROGRAMMING LANGUAGES": [
           {
             "skill": "C++",
             "score": 100,
             "frequency": 45
           }
         ],
-        "PROGRAMMING LANGUAGES": [
+        "INTELLIGENT SYSTEMS 1": [
           {
             "skill": "C++",
             "score": 100,

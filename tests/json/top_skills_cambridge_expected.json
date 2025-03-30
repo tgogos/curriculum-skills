@@ -1,21 +1,21 @@
 {
-  "university_name": "university of cambridge",
+  "university_name": "University of Cambridge",
   "top_skills": [
     {
       "skill": "analyse goal progress",
-      "frequency": 78
+      "frequency": 80
     },
     {
       "skill": "perform lectures",
-      "frequency": 73
+      "frequency": 75
     },
     {
       "skill": "read books",
-      "frequency": 51
+      "frequency": 53
     },
     {
       "skill": "prepare syllabuses for vocational courses",
-      "frequency": 34
+      "frequency": 35
     },
     {
       "skill": "promote education course",
@@ -23,31 +23,31 @@
     },
     {
       "skill": "develop course outline",
-      "frequency": 27
+      "frequency": 28
     },
     {
       "skill": "machine learning",
-      "frequency": 27
+      "frequency": 28
     },
     {
       "skill": "arrange student accommodation",
-      "frequency": 23
+      "frequency": 24
     },
     {
       "skill": "study topics",
-      "frequency": 21
+      "frequency": 22
     },
     {
       "skill": "design graphics",
-      "frequency": 20
+      "frequency": 21
     },
     {
       "skill": "application process",
-      "frequency": 19
+      "frequency": 20
     },
     {
       "skill": "assessment processes",
-      "frequency": 18
+      "frequency": 19
     },
     {
       "skill": "supervise practical courses",
@@ -62,19 +62,19 @@
       "frequency": 17
     },
     {
+      "skill": "systems theory",
+      "frequency": 17
+    },
+    {
       "skill": "implement cryptographic constructs",
       "frequency": 16
     },
     {
-      "skill": "systems theory",
+      "skill": "scientific computing",
       "frequency": 16
     },
     {
       "skill": "assign homework",
-      "frequency": 15
-    },
-    {
-      "skill": "scientific computing",
       "frequency": 15
     },
     {
@@ -102,6 +102,10 @@
       "frequency": 12
     },
     {
+      "skill": "compile course material",
+      "frequency": 12
+    },
+    {
       "skill": "calculate probabilities",
       "frequency": 12
     },
@@ -114,11 +118,11 @@
       "frequency": 11
     },
     {
-      "skill": "compile course material",
+      "skill": "data models",
       "frequency": 11
     },
     {
-      "skill": "data models",
+      "skill": "gather data",
       "frequency": 11
     },
     {
@@ -135,10 +139,6 @@
     },
     {
       "skill": "training  subject expertise",
-      "frequency": 10
-    },
-    {
-      "skill": "gather data",
       "frequency": 10
     },
     {
@@ -166,19 +166,15 @@
       "frequency": 10
     },
     {
+      "skill": "use presentation software",
+      "frequency": 10
+    },
+    {
       "skill": "make decisions",
       "frequency": 9
     },
     {
       "skill": "mathematics",
-      "frequency": 9
-    },
-    {
-      "skill": "think abstractly",
-      "frequency": 9
-    },
-    {
-      "skill": "use automatic programming",
       "frequency": 9
     },
     {
@@ -190,15 +186,19 @@
       "frequency": 9
     },
     {
+      "skill": "think abstractly",
+      "frequency": 9
+    },
+    {
+      "skill": "use automatic programming",
+      "frequency": 9
+    },
+    {
+      "skill": "transcreation",
+      "frequency": 9
+    },
+    {
       "skill": "types of evaluation ",
-      "frequency": 9
-    },
-    {
-      "skill": "geometry",
-      "frequency": 9
-    },
-    {
-      "skill": "human-computer interaction",
       "frequency": 9
     }
   ]

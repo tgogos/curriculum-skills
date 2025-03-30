@@ -41,7 +41,7 @@ def download_pdf(url: str, save_path: str) -> str:
         file.write(response.content)
     return save_path
 
-import fitz  # PyMuPDF
+import fitz 
 from concurrent.futures import ThreadPoolExecutor
 
 def extract_text_from_pdf(pdf_file_path: str) -> list:
@@ -58,7 +58,7 @@ def extract_text_from_pdf(pdf_file_path: str) -> list:
     page_texts = []
     
     try:
-        doc = fitz.open(pdf_file_path)  # Open PDF
+        doc = fitz.open(pdf_file_path) 
 
         def extract_page_text(page_num):
             """Extract text from a single page."""
@@ -68,11 +68,10 @@ def extract_text_from_pdf(pdf_file_path: str) -> list:
                 print(f"[WARNING] Page {page_num + 1} might be empty or improperly read!")
             return text
 
-        # Process pages in parallel
         with ThreadPoolExecutor() as executor:
             page_texts = list(executor.map(extract_page_text, range(len(doc))))
 
-        # Cache the results
+
         cache = load_cache()
         cache[cache_key] = page_texts
         from skills import save_cache
@@ -101,9 +100,8 @@ def extract_text_after_marker(text: list, markers: list) -> str:
         marker_index = full_text.lower().find(marker.lower())
         if marker_index != -1:
             print_colored_text(f"Found marker: {marker}", 32)
-            # Ensure we include some context lines after the marker
             extracted_text = full_text[marker_index + len(marker):]
-            return extracted_text.lstrip()  # Trim leading whitespace
+            return extracted_text.lstrip()
     
     print("No marker found in the text.")
     return full_text 
@@ -117,7 +115,6 @@ def split_by_semester(text: str) -> list:
     
     print("[INFO] Splitting text by semester or year...")
     
-    # Debug: Show the first few lines of text
     print(f"[DEBUG] First 500 chars of text:\n{text[:500]}\n---")
 
     semesters = re.split(r'(?i)(\b(?:Year\s+(?:One|Two|Three|Four|1|2|3|4)|\d+\s*(?:st|nd|rd|th)?\s*Semester)\b)', text)
@@ -133,7 +130,6 @@ def split_by_semester(text: str) -> list:
 
     print(f"[INFO] Found {len(combined_semesters)} semesters")
     
-    # Debug: Show extracted semester headers
     for i, sem in enumerate(combined_semesters, 1):
         print(f"[DEBUG] Semester/Year {i}: {sem[:100]}...")
 
@@ -153,19 +149,17 @@ def extract_description(text: str) -> str:
     for line in lines:
         line = line.strip()
         
-        # Detect lesson titles (uppercase words)
         if line.isupper() and len(line.split()) > 0:
             if capture:
-                break  # Stop capturing when the next lesson starts
+                break
             capture = True
-            continue  # Skip lesson name itself
+            continue
         
         if capture:
             lesson_description.append(line)
     
     description = '\n'.join(lesson_description).strip()
-    
-    # Cleanup description
+
     description = re.sub(r'(?i)course content', '', description).strip()
     return description if description else "This lesson has no data!"
 
@@ -190,18 +184,16 @@ def process_pages_by_lesson(pages: list) -> dict:
         for line in lines:
             line = line.strip()
 
-            # Detect lesson titles
             if line.isupper() and len(line.split()) > 0:
-                if potential_lesson_name:  # If a new lesson is detected, store the previous one first
+                if potential_lesson_name:
                     lesson_dict[potential_lesson_name] = '\n'.join(lesson_text).strip()
                     print(f"[INFO] ✅ Stored lesson: {potential_lesson_name}")
 
                 potential_lesson_name = clean_lesson_name(line).strip()
                 print(f"[DEBUG] Detected lesson title: {potential_lesson_name}")
 
-                # Apply all filters here
-                if re.search(r'[*_=!?,.]', potential_lesson_name):
-                    print(f"[DEBUG] Skipping '{potential_lesson_name}' (contains special characters)")
+                if re.search(r'[*_=!?\.]', potential_lesson_name) or (',' in potential_lesson_name and 'AND' not in potential_lesson_name.upper()):
+                    print(f"[DEBUG] Skipping '{potential_lesson_name}' (contains special characters or comma without AND)")
                     potential_lesson_name = None
                     continue
                 if re.match(r'^[a-zA-Z]+\d+$', potential_lesson_name):

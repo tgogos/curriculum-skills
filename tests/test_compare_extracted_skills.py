@@ -6,7 +6,7 @@ def test_compare_extracted_skills():
     with open("tests/json/extracted_skills_expected.json", "r", encoding="utf-8") as f:
         expected = json.load(f)
 
-    pdf_path = os.path.abspath("tests/sample_pdfs/Cambridge University.pdf")
+    pdf_path = os.path.abspath("tests/sample_pdfs/University of Cambridge.pdf")
     process_pdf(PDFProcessingRequest(pdf_name=pdf_path))
     response = calculate_skillnames("University of Cambridge")
 
