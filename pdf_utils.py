@@ -18,7 +18,7 @@ try:
 except LookupError:
     nltk.download('words')
 
-valid_words = set(words.words())  # Load dictionary words
+valid_words = set(words.words())
 
 def contains_real_words(text):
     """Check if the text contains at least one valid English word."""
@@ -213,19 +213,16 @@ def process_pages_by_lesson(pages: list) -> dict:
                     potential_lesson_name = None
                     continue
 
-                # Start capturing text for this lesson
                 capture_text = True
                 lesson_text = []
 
             elif capture_text and potential_lesson_name:
-                lesson_text.append(line)  # Collect lesson description lines
+                lesson_text.append(line) 
 
-        # Save the last detected lesson after processing all lines
         if potential_lesson_name:
             lesson_dict[potential_lesson_name] = '\n'.join(lesson_text).strip()
             print(f"[INFO] ✅ Stored last lesson: {potential_lesson_name}")
 
-    # Process pages in parallel
     with ThreadPoolExecutor() as executor:
         results = executor.map(process_page, enumerate(pages))
 
@@ -238,7 +235,7 @@ def get_university_name_mapping():
     """Reads the 'university_cache.json' and returns a mapping of PDF paths to university names."""
     try:
         with open('university_cache.json', 'r') as file:
-            return json.load(file)  # Return the mapping of paths to university names
+            return json.load(file)
     except FileNotFoundError:
         print("University cache file not found. Using default names.")
         return {}
@@ -249,15 +246,15 @@ def get_university_name_mapping():
 
 def get_pdf_path():
     """Searches for PDF files in the 'curriculum' folder and prompts the user to choose."""
-    pdf_files = glob.glob("curriculum/*.pdf")  # Find all PDFs in 'curriculum'
-    university_mapping = get_university_name_mapping()  # Get the mapping of PDF files to universities
+    pdf_files = glob.glob("curriculum/*.pdf") 
+    university_mapping = get_university_name_mapping()  
 
     if not pdf_files:
         print_colored_text("No PDF files found in the 'curriculum' folder.", 31)
         return None
 
     if len(pdf_files) == 1:
-        university_name = university_mapping.get(pdf_files[0], 'Unknown University')  # Default if not found
+        university_name = university_mapping.get(pdf_files[0], 'Unknown University')
         print_colored_text(f"University: {university_name} - Found PDF file: {pdf_files[0]}", 32)
         return pdf_files[0]
 
@@ -266,9 +263,8 @@ def get_pdf_path():
     print_green_line(30)
 
     for i, file in enumerate(pdf_files):
-        # Use the mapping to get the university name or default to 'Unknown University'
         university_name = university_mapping.get(file, 'Unknown University')
-        print(f"{i + 1}. [{university_name}] - {file}")  # Display university name before the file path
+        print(f"{i + 1}. [{university_name}] - {file}")
 
     while True:
         try:

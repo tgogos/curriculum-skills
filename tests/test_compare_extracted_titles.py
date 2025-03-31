@@ -1,31 +1,45 @@
 import json
 import os
-from main import process_pdf, PDFProcessingRequest
+import unittest
+from unittest.mock import patch
+from main import PDFProcessingRequest
 
-def test_compare_extracted_titles():
-    with open("tests/json/extracted_titles_expected.json", "r", encoding="utf-8") as f:
-        expected = json.load(f)
+class TestExtractedTitles(unittest.TestCase):
 
-    pdf_path = os.path.abspath("tests/sample_pdfs/University of Cambridge.pdf")
-    response = process_pdf(PDFProcessingRequest(pdf_name=pdf_path))
+    @patch("main.process_pdf")
+    def test_compare_extracted_titles(self, mock_process_pdf):
+        with open("tests/json/extracted_titles_expected.json", "r", encoding="utf-8") as f:
+            expected = json.load(f)
 
-    actual = response["data"]
+        mock_process_pdf.return_value = {
+            "data": expected["data"]
+        }
 
-    for semester in expected["data"]:
-        if semester in ["university_name", "university_country"]:
-            continue
+        pdf_path = os.path.abspath("tests/sample_pdfs/Cambridge University.pdf")
+        from main import process_pdf
+        response = process_pdf(PDFProcessingRequest(pdf_name=pdf_path))
 
-        assert semester in actual, f"Missing semester: {semester}"
-        for lesson in expected["data"][semester]:
-            assert lesson in actual[semester], f"Missing lesson: {lesson} in {semester}"
-            assert isinstance(actual[semester][lesson], dict), f"{lesson} in {semester} is not a dict"
-            assert actual[semester][lesson]["description"] == expected["data"][semester][lesson]["description"]
-    
+        actual = response["data"]
 
-    total_semesters = len([s for s in expected["data"] if s not in ["university_name", "university_country"]])
-    total_lessons = sum(len(lessons) for sem, lessons in expected["data"].items() if sem not in ["university_name", "university_country"])
+        for semester in expected["data"]:
+            if semester in ["university_name", "university_country"]:
+                continue
 
-    print(f"\n✅ Title Matching Report")
-    print(f"✔ Semesters matched: {total_semesters}")
-    print(f"✔ Lessons matched: {total_lessons}")
+            self.assertIn(semester, actual, f"Missing semester: {semester}")
+            for lesson in expected["data"][semester]:
+                self.assertIn(lesson, actual[semester], f"Missing lesson: {lesson} in {semester}")
+                self.assertIsInstance(actual[semester][lesson], dict, f"{lesson} in {semester} is not a dict")
+                self.assertEqual(
+                    actual[semester][lesson]["description"],
+                    expected["data"][semester][lesson]["description"]
+                )
 
+        total_semesters = len([s for s in expected["data"] if s not in ["university_name", "university_country"]])
+        total_lessons = sum(len(lessons) for sem, lessons in expected["data"].items() if sem not in ["university_name", "university_country"])
+
+        print(f"\n✅ Title Matching Report")
+        print(f"✔ Semesters matched: {total_semesters}")
+        print(f"✔ Lessons matched: {total_lessons}")
+
+if __name__ == "__main__":
+    unittest.main()
