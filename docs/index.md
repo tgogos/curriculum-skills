@@ -110,9 +110,6 @@ Install all dependencies:
 pip install -r requirements.txt
 ```
 
-Recommended: **Python 3.10**  
-Avoid Python 3.11+ due to compatibility with `esco-skill-extractor`.
-
 ---
 
 ## 💾 Database Setup

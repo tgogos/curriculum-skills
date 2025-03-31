@@ -80,8 +80,6 @@ localhost:5003
 
 Use credentials from `.env` to connect.
 
-Sure! Here's an expanded and beginner-friendly version of your **📄 Database Setup** section, especially focused on setting up the database using **XAMPP** and **phpMyAdmin**:
-
 ---
 
 ## 📄 Database Setup
